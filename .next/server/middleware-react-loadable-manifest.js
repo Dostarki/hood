@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"components\\\\BootScreen.js -> @/game/renderer\":{\"id\":\"components\\\\BootScreen.js -> @/game/renderer\",\"files\":[]},\"pages\\\\index.js -> @/pages/Game\":{\"id\":\"pages\\\\index.js -> @/pages/Game\",\"files\":[\"static/chunks/src_pages_Game_js.js\"]}}"

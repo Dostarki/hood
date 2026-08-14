@@ -1,0 +1,101 @@
+{
+  "design_philosophy": "Modern Minimalist Arcade Football. A collision of raw athletic performance (Elite Athleticism archetype) and high-contrast brutalism. The design prioritizes visual tension, legibility, and fast-paced interaction over generic soft-UI. No AI-slop purple gradients. We rely on Deep Obsidian, stark whites, and hyper-vibrant neon accents.",
+  "typography": {
+    "fonts": {
+      "heading": "Bebas Neue",
+      "body": "Outfit",
+      "score": "Bebas Neue"
+    },
+    "scales": {
+      "h1": "text-6xl sm:text-7xl lg:text-8xl tracking-tighter uppercase",
+      "h2": "text-4xl sm:text-5xl tracking-tight uppercase",
+      "score_board": "text-5xl sm:text-7xl tracking-tighter leading-none",
+      "timer": "text-2xl sm:text-3xl font-light tracking-widest",
+      "body": "text-base sm:text-lg tracking-wide",
+      "buttons": "text-xl sm:text-2xl uppercase tracking-widest"
+    },
+    "rules": [
+      "Headings and Scores MUST use tight letter spacing (tracking-tighter) for impact.",
+      "Never use Inter or standard sans for Headings.",
+      "Ensure body text has generous line height (leading-relaxed) in menus.",
+      "Use text-shadow on HUD elements to ensure contrast over the canvas."
+    ]
+  },
+  "colors": {
+    "archetype": "THE PERFORMANCE PRO mixed with NEON ACCENTS",
+    "background": {
+      "main": "#0A0D0B",
+      "pitch": "#112217",
+      "pitch_lines": "rgba(255, 255, 255, 0.4)",
+      "overlay": "rgba(10, 13, 11, 0.85)"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A3B3A8",
+      "muted": "#526658"
+    },
+    "accents": {
+      "primary": "#00FF66",
+      "secondary": "#FF3B30",
+      "tertiary": "#007AFF"
+    },
+    "rules": [
+      "NO PURPLE GRADIENTS.",
+      "Tinted Grey Rule: All darks (like #0A0D0B) are tinted with a slight forest green to match the turf theme.",
+      "Use Pure White (#FFFFFF) for data clarity and Electric Neon Green (#00FF66) as the kinetic trigger.",
+      "Canvas should use deep muted greens; UI should be stark black/white/neon."
+    ]
+  },
+  "visual_enhancers": {
+    "buttons": "Neo-brutalist blocks. 0px border-radius (sharp corners). 1px solid vibrant border (#00FF66). Default transparent background, hover state fills with the vibrant color and text flips to black.",
+    "glassmorphism": "For HUD and menus overlapping canvas: Use Crystal variant. bg-black/70 with backdrop-blur-md, and a sharp 1px border-white/10. NEVER use pure transparent backgrounds for text layers.",
+    "borders": "Expose the skeleton. Use thin 1px lines (border-white/10) to separate layout zones in menus.",
+    "shadows": "Hard shadows instead of soft blurs. shadow-[4px_4px_0px_#00FF66]"
+  },
+  "layouts": {
+    "main_menu": "Centered brutalist layout. Massive title text spanning the width. Generous spacing (gap-12). Actions stacked vertically. Background could be an abstract dark stadium image with a heavy black/70 overlay.",
+    "game_hud": "Absolute positioned over canvas (z-50). Top-center bento-style scoreboard: left team score, center timer, right team score. Player labels absolute positioned left/right edge.",
+    "match_end_screen": "Full screen overlay (bg-black/90 backdrop-blur-lg). Massive 'MATCH OVER' heading, winner announcement, and prominent 'PLAY AGAIN' neon button.",
+    "mobile_controls": "Semi-transparent solid blocks. Bottom-left: Left/Right movement arrows. Bottom-right: Jump and Kick action buttons. Must use bg-black/50 backdrop-blur-sm border border-white/20 for visibility without totally blocking gameplay."
+  },
+  "components": {
+    "button": "className=\"px-8 py-4 bg-transparent border border-[#00FF66] text-[#00FF66] hover:bg-[#00FF66] hover:text-black transition-colors duration-200 uppercase tracking-widest font-heading\"",
+    "score_badge": "className=\"px-6 py-3 bg-black/80 backdrop-blur-md border border-white/20 text-white font-heading text-5xl flex items-center justify-center min-w-[80px]\"",
+    "timer_badge": "className=\"px-4 py-2 bg-[#0A0D0B]/90 border border-white/10 text-white font-body text-2xl tracking-widest\"",
+    "mobile_dpad_button": "className=\"w-16 h-16 bg-black/50 backdrop-blur-md border border-white/20 text-white flex items-center justify-center active:bg-white/20 transition-colors\""
+  },
+  "motion": {
+    "menu_transitions": "Framer Motion. Fast, decisive slides and scales. duration: 0.2, ease: 'easeOut'.",
+    "score_update": "Quick scale bump (1.0 to 1.5 back to 1.0) when a goal is scored. Text color flashes #00FF66.",
+    "hover_states": "Instant color snaps. No muddy fading transitions for buttons."
+  },
+  "media": {
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1676746424139-77f8bd8922a8",
+        "description": "A soccer field at night with the lights on. Use as the background for the Main Menu with a dark overlay to create atmosphere.",
+        "category": "Main Menu Background"
+      },
+      {
+        "url": "https://images.pexels.com/photos/11953753/pexels-photo-11953753.jpeg",
+        "description": "Action-packed night soccer match with players competing under field lights. Can be used as abstract texture for Match End Screen.",
+        "category": "Match End Screen Background"
+      }
+    ],
+    "canvas_assets": "For the HTML5 Canvas, draw players as stylized, clean geometric shapes (e.g., pill shapes or distinct colorful blocks). No detailed sprites needed, keep it modern and abstract."
+  },
+  "accessibility": {
+    "contrast": "Text over canvas MUST have a text-shadow or be encased in a semi-transparent HUD box to guarantee contrast against moving players.",
+    "keyboard": "WASD / Arrow Keys must be fully mapped and accessible. Enter key to trigger main actions (Play, Rematch).",
+    "reduced_motion": "Respect prefers-reduced-motion for score bumps and menu slides."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You are building a .js React application, NOT .tsx. Provide pure JavaScript solutions.",
+    "HTML5 Canvas must be responsive. Use standard ResizeObserver or window event listeners to scale the canvas drawing context appropriately.",
+    "DO NOT apply global transitions like 'transition: all' in CSS. Target specific properties (e.g., transition-colors).",
+    "DO NOT center align the entire app container blindly; structure layouts explicitly with flex or grid.",
+    "ALL interactive elements (buttons, mobile controls, settings toggles) MUST have a 'data-testid' attribute in kebab-case based on role (e.g., 'data-testid=\"play-button\"', 'data-testid=\"mobile-btn-jump\"').",
+    "Use Phosphor Icons or Lucide-React for standard UI icons (settings, sound toggle).",
+    "For sound effects, use the Web Audio API or a lightweight audio manager to play programmatic synth beeps (kick, jump, whistle, goal siren) to match the arcade aesthetic."
+  ]
+}

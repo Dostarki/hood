@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0A0D0B;
+  color: #FFFFFF;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+}
+
+.font-heading {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.font-body {
+  font-family: 'Outfit', sans-serif;
+}
+
+.App {
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
+  background: #0A0D0B;
+}
+
+/* Neo-brutalist button */
+.btn-brutal {
+  padding: 14px 40px;
+  background: transparent;
+  border: 1px solid #00FF66;
+  color: #00FF66;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.18s ease-out, color 0.18s ease-out, transform 0.15s ease-out;
+  box-shadow: 4px 4px 0px #00FF66;
+  position: relative;
+}
+.btn-brutal:hover {
+  background: #00FF66;
+  color: #0A0D0B;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #00FF66;
+}
+.btn-brutal:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #00FF66;
+}
+.btn-brutal.secondary {
+  border-color: #FFFFFF;
+  color: #FFFFFF;
+  box-shadow: 4px 4px 0px rgba(255,255,255,0.4);
+}
+.btn-brutal.secondary:hover {
+  background: #FFFFFF;
+  color: #0A0D0B;
+}
+
+/* HUD score badge */
+.score-badge {
+  background: rgba(10, 13, 11, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 8px 18px;
+  min-width: 80px;
+  text-align: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3rem;
+  line-height: 1;
+  color: #FFFFFF;
+}
+.score-badge.flash {
+  color: #00FF66;
+  animation: flash 0.5s ease-out;
+}
+@keyframes flash {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.4); color: #00FF66; }
+  100% { transform: scale(1); }
+}
+
+.timer-badge {
+  background: rgba(10, 13, 11, 0.9);
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 8px 22px;
+  color: #FFFFFF;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: 0.15em;
+  min-width: 90px;
+  text-align: center;
+}
+.timer-badge.warning {
+  color: #FF3B30;
+  border-color: #FF3B30;
+}
+
+/* Mobile control button */
+.ctrl-btn {
+  width: 78px;
+  height: 78px;
+  background: rgba(10,13,11,0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  border-radius: 50%;
+  touch-action: none;
+  transition: background-color 0.1s ease-out, transform 0.1s ease-out;
+}
+.ctrl-btn.action {
+  background: rgba(0, 255, 102, 0.15);
+  border-color: rgba(0, 255, 102, 0.6);
+  color: #00FF66;
+}
+.ctrl-btn:active, .ctrl-btn.pressed {
+  background: rgba(255,255,255,0.25);
+  transform: scale(0.92);
+}
+.ctrl-btn.action:active, .ctrl-btn.action.pressed {
+  background: #00FF66;
+  color: #0A0D0B;
+}
+
+/* Menu bg image w/ overlay */
+.menu-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://images.unsplash.com/photo-1676746424139-77f8bd8922a8?auto=format&fit=crop&w=1920&q=70');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.35) saturate(0.7);
+  z-index: 0;
+}
+.menu-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10,13,11,0.6) 0%, rgba(10,13,11,0.92) 100%);
+}
+
+/* Grid noise texture */
+.grid-noise {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.canvas-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0A0D0B;
+}
+canvas.game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.fade-in {
+  animation: fadein 0.3s ease-out;
+}
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  width: 100%;
+}

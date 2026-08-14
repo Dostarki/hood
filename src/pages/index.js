@@ -1,0 +1,6 @@
+import dynamic from 'next/dynamic';
+const Game = dynamic(() => import('@/pages/Game'), { ssr: false });
+
+export default function Home() {
+  return <Game />;
+}

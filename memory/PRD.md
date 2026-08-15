@@ -18,6 +18,16 @@ Web tarayıcısında çalışan 2D futbol oyunu geliştir. Hızlı arcade futbol
 - **Audio**: `AudioContext` oscillator-based SFX (`/app/frontend/src/game/audio.js`)
 - **State machine**: MENU → PLAYING → PAUSED → ENDED (see `/app/frontend/src/pages/Game.js`)
 
+## Implemented (2026-06) — RainbowKit Cüzdan Entegrasyonu
+- RainbowKit v2 + wagmi v2 + viem v2 kuruldu (`@tanstack/react-query` zaten mevcuttu)
+- Sağ üstte her ekranda sabit "Connect Wallet" butonu (`/app/src/components/WalletButton.js`, data-testid `wallet-connect-container`), `_app.js` içinde global render
+- Provider sırası: WagmiProvider → QueryClientProvider → RainbowKitProvider (neon yeşil darkTheme)
+- Özel zincir: Robinhood Chain (id 4663, RPC https://rpc.mainnet.chain.robinhood.com, ETH, explorer robinhoodchain.blockscout.com) — `/app/src/lib/chain.js`
+- Config: `/app/src/lib/wagmi.js` getDefaultConfig, projectId env `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` (/app/.env), ssr:true
+- ConnectButton showBalance=true → bağlanınca adres + ETH bakiye; yanlış ağda otomatik "Wrong network" uyarısı (yalnızca Robinhood Chain tanımlı)
+- Test: iteration_3.json %100 (4/4) — buton, modal (Rainbow/Base/MetaMask/WalletConnect), oyun içi kalıcılık, hata yok
+- Not: Gerçek cüzdan bağlantısı için kullanıcının tarayıcı cüzdanı (MetaMask vb.) gerekir; otomasyon ortamında tam bağlantı test edilemez
+
 ## Implemented (2026-06) — Street Style Görsel Yenileme
 - Kullanıcının paylaştığı Head Ball 2 referans görseline uygun sahne (`/app/src/game/renderer.js`):
   - Grafiti kaplı beton duvar, ayakta tezahürat yapan çizgi film seyirci kalabalığı

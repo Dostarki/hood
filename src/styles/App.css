@@ -140,6 +140,38 @@ body {
   color: #0A0D0B;
 }
 
+/* Head-football style buttons (reference art): warm orange cleats/arrows */
+.ctrl-btn.hb {
+  background: linear-gradient(180deg, #FF9F45 0%, #F97316 100%);
+  border: 2px solid rgba(0,0,0,0.35);
+  color: #4A1E00;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.35), inset 0 2px 2px rgba(255,255,255,0.35);
+}
+.ctrl-btn.hb.action {
+  background: linear-gradient(180deg, #FFB65C 0%, #F97316 100%);
+  color: #3A1600;
+}
+.ctrl-btn.hb:active, .ctrl-btn.hb.pressed {
+  background: linear-gradient(180deg, #F97316 0%, #EA580C 100%);
+  color: #2A1000;
+  transform: translateY(2px) scale(0.96);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.35), inset 0 2px 4px rgba(0,0,0,0.25);
+}
+
+/* Cleat icon + direction arrow overlay */
+.boot-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.boot-arrow {
+  position: absolute;
+  color: #3A1600;
+}
+.boot-arrow-fwd { right: -3px; top: -7px; }
+.boot-arrow-up { right: 5px; top: -9px; }
+
 /* Menu bg image w/ overlay */
 .menu-bg {
   position: absolute;

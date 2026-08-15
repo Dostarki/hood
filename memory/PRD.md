@@ -18,6 +18,14 @@ Web tarayıcısında çalışan 2D futbol oyunu geliştir. Hızlı arcade futbol
 - **Audio**: `AudioContext` oscillator-based SFX (`/app/frontend/src/game/audio.js`)
 - **State machine**: MENU → PLAYING → PAUSED → ENDED (see `/app/frontend/src/pages/Game.js`)
 
+## Implemented (2026-06) — Street Style Görsel Yenileme
+- Kullanıcının paylaştığı Head Ball 2 referans görseline uygun sahne (`/app/src/game/renderer.js`):
+  - Grafiti kaplı beton duvar, ayakta tezahürat yapan çizgi film seyirci kalabalığı
+  - Tel örgü (chain-link) çit, sokak lambaları, açık mavi gökyüzü + bulutlar
+  - Beyaz çerçeveli kaleler (dik ön direk, eğik arka destek, beyaz file ağı)
+  - Yıpranmış çim saha (toprak lekeleri, beyaz çizgiler, perspektif orta yuvarlak, ceza sahaları)
+  - Sahanın altında kahverengi toprak zemin (çakıl/benek dokulu)
+
 ## Implemented (2026-02-13)
 - Main menu (Neon Pitch Striker branding, Oyna/Ayarlar/Ses toggle)
 - Side-view canvas: pitch, dual goals with nets, ground stripes, stadium bg

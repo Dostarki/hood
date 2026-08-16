@@ -44,6 +44,7 @@ export function draw(ctx, engine, canvasW, canvasH) {
   drawPlayer(ctx, engine.ai);
   drawBall(ctx, engine.ball);
   drawConfetti(ctx, engine.confetti);
+  drawHits(ctx, engine.hits);
   if (celebrating) drawGoalText(ctx, engine.lastScorer, engine.celebration);
 
   ctx.restore();
@@ -1320,6 +1321,71 @@ function drawConfetti(ctx, particles) {
   });
   ctx.globalAlpha = 1;
 }
+
+// Header / ball-contact impact: expanding glow ring, flash core, comic impact spikes.
+function drawHits(ctx, hits) {
+  if (!hits || !hits.length) return;
+  hits.forEach((h) => {
+    const t = 1 - h.life / h.maxLife; // 0 -> 1 over lifetime
+    const ease = 1 - Math.pow(1 - t, 2);
+    const r = h.r0 + (h.r1 - h.r0) * ease;
+    const alpha = 1 - t;
+
+    ctx.save();
+    ctx.translate(h.x, h.y);
+
+    // Soft outer glow
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    grad.addColorStop(0, `rgba(255,255,255,${0.55 * alpha})`);
+    grad.addColorStop(0.4, `rgba(255,227,77,${0.45 * alpha})`);
+    grad.addColorStop(1, 'rgba(255,227,77,0)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shockwave ring
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = `rgba(255,255,255,${0.9 * alpha})`;
+    ctx.lineWidth = (h.big ? 5 : 3) * (1 - t * 0.7);
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Comic impact spikes (starburst) — only early in the effect
+    if (t < 0.6) {
+      const spikeAlpha = (1 - t / 0.6);
+      const n = h.spikes || 8;
+      const inner = h.r0 * 0.5;
+      const outer = h.r0 + (r - h.r0) * 0.85;
+      ctx.strokeStyle = `rgba(255,227,77,${spikeAlpha})`;
+      ctx.lineWidth = h.big ? 6 : 4;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + t * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+        ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+        ctx.stroke();
+      }
+    }
+
+    // Bright flash core
+    if (h.big && t < 0.4) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = `rgba(255,255,255,${(1 - t / 0.4) * 0.9})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, h.r0 * (1 - t / 0.4) + 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  });
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+}
+
 
 function drawGoalText(ctx, side, celebration) {
   // Fade in/out envelope

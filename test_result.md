@@ -186,19 +186,71 @@ frontend:
           Note: Actual ball trajectory differences (lob arc vs flat shot) cannot be verified
           via DOM testing (canvas-based rendering), but the input mechanics work correctly.
 
+  - task: "Header impact visual effect + sound (ball-to-head hit)"
+    implemented: true
+    working: "NA"
+    file: "src/game/engine.js, src/game/renderer.js, src/game/audio.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: |
+          collideBallPlayer() returns a hit descriptor; on a FRONT header it calls
+          audio.header() (new 'thock' SFX) and engine._spawnHit() adds a
+          glow/shockwave/impact-spike effect to engine.hits + small screen shake.
+          renderer.drawHits() draws the effect at the contact point. Verify no
+          console errors and headers still work.
+
+  - task: "Mobile controls layout redesign (single row, responsive, on-screen)"
+    implemented: true
+    working: "NA"
+    file: "src/components/MobileControls.js, src/styles/App.css"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: |
+          BUG (user, mobile android+ios): controls were scattered/wrapping and
+          pushed off the visible screen bottom. Fixes: .App uses 100dvh/100dvw;
+          MobileControls rewritten as a single .mobile-controls bar with buttons
+          sized clamp(52px,15vw,74px) so all 5 fit one row even at 320px; layout
+          matches reference (2 round arrows left; 3 red squircle boot buttons
+          right = shoot boot+arrow, jump boot+up, lob boot+lines). safe-area
+          padding. data-testids preserved.
+
 metadata:
   created_by: "main_agent"
-  version: "1.2"
-  test_sequence: 2
+  version: "1.3"
+  test_sequence: 3
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Mobile controls layout redesign (single row, responsive, on-screen)"
+    - "Header impact visual effect + sound (ball-to-head hit)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
+    -agent: "main"
+    -message: |
+      NEW CHANGES to verify (pure frontend, canvas game). Test in a MOBILE viewport.
+      1) MOBILE CONTROLS (PRIMARY reported bug): Test BOTH portrait (390x844) AND
+         landscape (844x390). Click "AI-PLAY" to start. Confirm 5 buttons render
+         with data-testids: mobile-btn-left, mobile-btn-right, mobile-btn-shoot,
+         mobile-btn-jump, mobile-btn-lob. CRITICAL: all 5 on a SINGLE bottom row,
+         fully visible (no wrapping, not off-screen). Tapping each must not throw
+         and should register input.
+      2) HEADER EFFECT + SOUND: when ball hits the player head a glow/starburst
+         appears + a 'thock' sound. Canvas-rendered; key acceptance = NO console
+         errors, game stable while headers occur.
+      Report console errors verbatim and whether all 5 buttons are on one row and
+      visible in both orientations.
     -agent: "main"
     -message: |
       Pure frontend (HTML5 Canvas) game changes — no backend logic changed

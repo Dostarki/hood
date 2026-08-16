@@ -224,8 +224,9 @@ function collideBallPlayer(ball, player) {
       }
       audio.kick();
       player.kicking = 0; // End kick so it only hits once
+      return { type: 'kick', x: ball.x, y: ball.y };
     }
-    return true;
+    return { type: 'body', x: ball.x, y: ball.y };
   }
   // Head collision (round)
   const hdx = ball.x - player.headX;
@@ -243,15 +244,17 @@ function collideBallPlayer(ball, player) {
       ball.vy = ny * HEAD_KICK_POWER * 0.3 - 4;      // gentle upward pop
       ball.vx = player.vx * 0.3 - player.ownGoalDir * 2; // nudge away from own goal
       audio.bounce();
+      return { type: 'header-soft', x: player.headX + nx * player.headR, y: player.headY + ny * player.headR };
     } else {
       // Header (front): full power away from our goal.
       ball.vx = nx * HEAD_KICK_POWER + player.vx * 0.6;
       ball.vy = ny * HEAD_KICK_POWER * 0.9 - 3;
-      audio.kick();
+      audio.header();
+      const power = Math.min(1, (len(ball.vx, ball.vy)) / 16);
+      return { type: 'header', x: player.headX + nx * player.headR, y: player.headY + ny * player.headR, nx, ny, power };
     }
-    return true;
   }
-  return false;
+  return null;
 }
 
 export class GameEngine {
@@ -264,6 +267,8 @@ export class GameEngine {
     this.remoteInput = { left: false, right: false, jump: false, shoot: false, lob: false };
     this.lastRemoteState = null;
     this.stateTickCount = 0;
+    this.snapBuffer = [];      // guest: timed snapshot buffer for interpolation
+    this.interpDelay = 110;    // ms render delay behind newest snapshot
     this.ball = new Ball();
     this.scoreL = 0;
     this.scoreR = 0;
@@ -283,6 +288,7 @@ export class GameEngine {
     this.celebration = 0;   // frames of celebration
     this.lastScorer = null; // 'left' | 'right'
     this.confetti = [];     // particles
+    this.hits = [];         // header/impact flash effects
     this.shake = 0;
   }
 
@@ -293,8 +299,9 @@ export class GameEngine {
   step(dt) {
     if (this.ended || this.paused) return;
 
-    // Guest mode: skip simulation, only advance visual effects
+    // Guest mode: skip simulation, interpolate remote snapshots + visual effects
     if (this.mode === 'guest') {
+      this._interpolateGuest(performance.now());
       this._updateParticles();
       if (this.shake > 0) this.shake *= 0.9;
       if (this.celebration > 0) this.celebration--;
@@ -329,8 +336,10 @@ export class GameEngine {
     this.ai.update();
     this.ball.update();
 
-    collideBallPlayer(this.ball, this.player);
-    collideBallPlayer(this.ball, this.ai);
+    const hitP = collideBallPlayer(this.ball, this.player);
+    if (hitP) this._spawnHit(hitP);
+    const hitA = collideBallPlayer(this.ball, this.ai);
+    if (hitA) this._spawnHit(hitA);
 
     // Prevent players overlap
     this._playersCollide();
@@ -453,15 +462,9 @@ export class GameEngine {
 
   applyRemoteState(s) {
     if (!s) return;
-    this.player.x = s.pX; this.player.y = s.pY;
-    this.player.facing = s.pF; this.player.kicking = s.pK;
-    this.player.legPhase = s.pL / 100;
-    this.ai.x = s.aX; this.ai.y = s.aY;
-    this.ai.facing = s.aF; this.ai.kicking = s.aK;
-    this.ai.legPhase = s.aL / 100;
-    this.ball.x = s.bX; this.ball.y = s.bY;
-    this.ball.vx = s.bVX / 10; this.ball.vy = s.bVY / 10;
-    this.ball.spin = s.bS / 100;
+    // Buffer timed snapshots; guest renders ~interpDelay ms in the past for smoothness.
+    this.snapBuffer.push({ t: performance.now(), s });
+    if (this.snapBuffer.length > 30) this.snapBuffer.shift();
     const oldScoreL = this.scoreL;
     const oldScoreR = this.scoreR;
     this.scoreL = s.sL; this.scoreR = s.sR;
@@ -473,6 +476,41 @@ export class GameEngine {
       this.shake = 12;
       this._spawnConfetti();
       audio.goal();
+    }
+  }
+
+  _interpolateGuest(now) {
+    const buf = this.snapBuffer;
+    if (buf.length === 0) return;
+    const renderT = now - this.interpDelay;
+    let a = buf[0];
+    let b = buf[buf.length - 1];
+    for (let i = buf.length - 1; i >= 0; i--) {
+      if (buf[i].t <= renderT) {
+        a = buf[i];
+        b = buf[i + 1] || buf[i];
+        break;
+      }
+    }
+    const k = b.t > a.t ? clamp((renderT - a.t) / (b.t - a.t), 0, 1) : 1;
+    // Snap instead of lerp on teleports (goal resets)
+    const L = (v1, v2) => (Math.abs(v2 - v1) > 300 ? v2 : v1 + (v2 - v1) * k);
+    const s1 = a.s, s2 = b.s;
+    this.player.x = L(s1.pX, s2.pX); this.player.y = L(s1.pY, s2.pY);
+    this.player.facing = s2.pF; this.player.kicking = s2.pK;
+    this.player.legPhase = L(s1.pL, s2.pL) / 100;
+    this.ai.x = L(s1.aX, s2.aX); this.ai.y = L(s1.aY, s2.aY);
+    this.ai.facing = s2.aF; this.ai.kicking = s2.aK;
+    this.ai.legPhase = L(s1.aL, s2.aL) / 100;
+    this.ball.x = L(s1.bX, s2.bX); this.ball.y = L(s1.bY, s2.bY);
+    this.ball.vx = s2.bVX / 10; this.ball.vy = s2.bVY / 10;
+    this.ball.spin = L(s1.bS, s2.bS) / 100;
+    // Buffer starved (packet gap): extrapolate the ball briefly using last velocity
+    const newest = buf[buf.length - 1];
+    if (renderT > newest.t) {
+      const dtMs = Math.min(200, renderT - newest.t);
+      this.ball.x += (newest.s.bVX / 10) * (dtMs / 16.67);
+      this.ball.y += (newest.s.bVY / 10) * (dtMs / 16.67);
     }
   }
 
@@ -552,7 +590,42 @@ export class GameEngine {
     }
   }
 
+  _spawnHit(hit) {
+    if (!hit) return;
+    if (hit.type === 'header') {
+      // Prominent flash + shockwave ring + impact spikes for a real header
+      const power = hit.power || 0.6;
+      this.hits.push({
+        x: hit.x, y: hit.y,
+        life: 20, maxLife: 20,
+        r0: 18, r1: 70 + power * 55,
+        spikes: 8,
+        color: '#FFE34D',
+        big: true,
+      });
+      this.shake = Math.max(this.shake, 6 + power * 8);
+    } else if (hit.type === 'header-soft') {
+      this.hits.push({
+        x: hit.x, y: hit.y,
+        life: 12, maxLife: 12,
+        r0: 12, r1: 42,
+        spikes: 6,
+        color: '#BFE9FF',
+        big: false,
+      });
+    }
+  }
+
+  _updateHits() {
+    const list = this.hits;
+    for (let i = list.length - 1; i >= 0; i--) {
+      list[i].life--;
+      if (list[i].life <= 0) list.splice(i, 1);
+    }
+  }
+
   _updateParticles() {
+    this._updateHits();
     const list = this.confetti;
     for (let i = list.length - 1; i >= 0; i--) {
       const p = list[i];

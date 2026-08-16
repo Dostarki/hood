@@ -1,5 +1,12 @@
 # KICKHOOD — Product Requirements
 
+## Online Stabilite & Production Mode (2026-06)
+- **Guest kasma fix**: `engine.js` guest tarafına snapshot interpolation eklendi (`snapBuffer` + `_interpolateGuest`, 110ms render gecikmesi, ışınlanma >300px'te snap, paket boşluğunda top ekstrapolasyonu). Host state gönderimi 20Hz→30Hz, guest input 25Hz→30Hz (`Game.js`).
+- **Kopma fix**: WS keepalive (client 10sn JSON ping `net.js`, server 30sn ws.ping heartbeat) + **maç içi otomatik yeniden bağlanma**: `match_start` artık `token` içerir; soket düşerse client 1.2sn arayla max 10 deneme resume yapar; server 15sn grace period tutar (`handleDisconnect`/`resume`/sweep). Eventler: `opponent_reconnecting/opponent_reconnected/resumed/resume_failed`. Oyunda sarı "RECONNECTING…" banner (`reconnect-banner`) + engine pause; resume başarısızsa maç `opponent_left` gibi biter. Online maçta `beforeunload` uyarısı.
+- **Sayfa yenilenme fix**: Uygulama **PRODUCTION modda** (`/app/.env` → `NODE_ENV=production`, `next build`). Dev-HMR kaynaklı `_hardReload` tam sayfa yenilemeleri ortadan kalktı.
+- ⚠️ **ÖNEMLİ — HOT RELOAD KAPALI**: Kod değişikliğinden sonra `cd /app && yarn build && sudo supervisorctl restart frontend` gerekir. Build sırasında frontend'i durdur (`supervisorctl stop frontend`), yoksa dev süreç `.next`'i bozar (MODULE_NOT_FOUND vendor-chunks hatası yaşandı).
+- Test: iteration_5 %100 (backend 9/9 WS senaryosu: eşleşme+token, relay, kirli kopma→resume→state relay, kötü token reddi, ~15.9sn grace→opponent_left; frontend 4/4 regresyon). Test scriptleri: `/app/tests/ws_resume_test.js`, `/app/tests/ws_grace_expiry_test.js`.
+
 ## Ranked Stakes + Hard AI (2026-06)
 - **AI zorluğu sabit HARD**: `engine.js._updateAI()` yeniden yazıldı (hızlı reactSpeed ~PLAYER_SPEED*1.12, top tahmini, topun gol tarafına geçme, güvenilir şut/kafa/aşırtma). Menüde zorluk seçimi yok.
 - **Ranked Play stake seçimi**: RANKED PLAY → yeni `RankedStake.js` ekranı. **Cüzdan bağlı olması ZORUNLU** (wagmi `useAccount`); bağlı değilse `ranked-connect-prompt` + inline ConnectButton gösterilir.

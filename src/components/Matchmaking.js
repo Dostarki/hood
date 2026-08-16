@@ -5,7 +5,7 @@ import { TEAMS, getTeamById } from '@/game/teams';
 import { audio } from '@/game/audio';
 
 // Matchmaking screen: connects to WS, sends find_match, waits for match_start.
-export default function Matchmaking({ playerTeam, playerName, onCancel, onMatched }) {
+export default function Matchmaking({ playerTeam, playerName, stake, onCancel, onMatched }) {
   const [status, setStatus] = useState('connecting'); // connecting | searching | error
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState(0);
@@ -19,10 +19,10 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
         await net.connect();
         if (cancelled) return;
         setStatus('searching');
-        net.findMatch(playerName || playerTeam.name, playerTeam.id);
+        net.findMatch(playerName || playerTeam.name, playerTeam.id, stake);
       } catch (e) {
         setStatus('error');
-        setError('Bağlanılamadı. Bağlantını kontrol et.');
+        setError('Could not connect. Check your connection.');
       }
     };
 
@@ -39,12 +39,12 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
     unsubs.push(net.on('error', () => {
       if (cancelled) return;
       setStatus('error');
-      setError('Bağlantı hatası.');
+      setError('Connection error.');
     }));
     unsubs.push(net.on('close', () => {
       if (cancelled) return;
       setStatus('error');
-      setError('Sunucuya erişilemedi.');
+      setError('Could not reach the server.');
     }));
 
     start();
@@ -55,7 +55,7 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
       clearInterval(timer);
       unsubs.forEach((u) => u());
     };
-  }, [playerTeam, playerName, onMatched]);
+  }, [playerTeam, playerName, stake, onMatched]);
 
   const handleCancel = () => {
     audio.menuBack();
@@ -73,19 +73,26 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
       <div className="relative z-10 w-full max-w-2xl px-6 sm:px-10 fade-in">
         <div className="flex items-center gap-3 mb-4">
           <Wifi size={16} strokeWidth={2.5} color="#00FF66" />
-          <div className="font-heading text-sm tracking-[0.4em] text-white/70">ONLINE MAÇ</div>
+          <div className="font-heading text-sm tracking-[0.4em] text-white/70">RANKED MATCH</div>
         </div>
 
         <h2
           className="font-heading uppercase text-white leading-none tracking-tighter"
           style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}
         >
-          RAKİP <span style={{ color: '#00FF66' }}>ARANIYOR</span>
+          FINDING <span style={{ color: '#00FF66' }}>OPPONENT</span>
         </h2>
+
+        {stake ? (
+          <div className="mt-3 inline-flex items-center gap-2 border border-white/15 bg-black/50 px-4 py-2" data-testid="matchmaking-stake">
+            <span className="font-heading text-white/50 tracking-[0.3em] text-xs">STAKE</span>
+            <span className="font-heading text-2xl leading-none" style={{ color: '#F4E04D' }}>${stake}</span>
+          </div>
+        ) : null}
 
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-6 border border-white/10 bg-black/60 backdrop-blur-md p-6">
           <div className="flex flex-col items-center gap-2 flex-1">
-            <div className="font-heading text-white/50 tracking-[0.3em] text-xs">SEN</div>
+            <div className="font-heading text-white/50 tracking-[0.3em] text-xs">YOU</div>
             <div
               className="w-24 h-24 flex items-center justify-center border-2"
               style={{ borderColor: playerTeam.primary, background: `${playerTeam.primary}22` }}
@@ -100,7 +107,7 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
           <div className="font-heading text-4xl text-white/40">VS</div>
 
           <div className="flex flex-col items-center gap-2 flex-1">
-            <div className="font-heading text-white/50 tracking-[0.3em] text-xs">RAKİP</div>
+            <div className="font-heading text-white/50 tracking-[0.3em] text-xs">OPPONENT</div>
             <div className="w-24 h-24 flex items-center justify-center border-2 border-dashed border-white/20">
               <Loader2 size={44} strokeWidth={2.5} className="animate-spin text-white/40" />
             </div>
@@ -111,10 +118,10 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center gap-3 font-body text-white/70" data-testid="matchmaking-status">
             {status === 'connecting' && (
-              <><Loader2 size={16} className="animate-spin" /><span>Sunucuya bağlanılıyor…</span></>
+              <><Loader2 size={16} className="animate-spin" /><span>Connecting to server…</span></>
             )}
             {status === 'searching' && (
-              <><Loader2 size={16} className="animate-spin text-[#00FF66]" /><span>Rakip aranıyor · {elapsed}s</span></>
+              <><Loader2 size={16} className="animate-spin text-[#00FF66]" /><span>Finding opponent · {elapsed}s</span></>
             )}
             {status === 'error' && (
               <span className="text-[#FF3B30]">{error}</span>
@@ -126,12 +133,12 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
             className="btn-brutal secondary flex items-center gap-2"
             onClick={handleCancel}
           >
-            <X size={18} strokeWidth={2.5} /> İPTAL
+            <X size={18} strokeWidth={2.5} /> CANCEL
           </button>
         </div>
 
         <div className="mt-8 text-white/50 text-sm font-body leading-relaxed max-w-lg">
-          Diğer bir oyuncu &quot;MAÇ BUL&quot; diyene kadar bekle. İki oyuncu aynı anda arama yapınca otomatik eşleşirsiniz.
+          You are only matched with players who chose the same ${stake} stake. When two equal-stake players search at the same time, you are matched automatically.
         </div>
       </div>
     </div>

@@ -22,6 +22,7 @@ const BALL_GROUND_FRICTION = 0.985;
 const KICK_POWER = 15;
 const KICK_LIFT = -9;
 const HEAD_KICK_POWER = 12;
+const LOB_LIFT = -22;        // strong upward arc for the chip / aşırtma
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function len(x, y) { return Math.hypot(x, y); }
@@ -47,6 +48,9 @@ class Player {
     this.kicking = 0;          // countdown for kick animation
     this.facing = side === 'left' ? 1 : -1;
     this.legPhase = 0;
+    // Direction toward THIS player's own goal (used to prevent own goals on back hits)
+    this.ownGoalDir = side === 'left' ? -1 : 1;
+    this.kickType = 'shot';    // 'shot' (flat drive) | 'lob' (chip / aşırtma)
   }
 
   get feetX() { return this.x + this.w / 2; }
@@ -67,10 +71,16 @@ class Player {
       audio.jump();
     }
   }
-  tryKick() {
+  tryKick(type = 'shot') {
     if (this.kickCooldown <= 0) {
       this.kicking = 14;
       this.kickCooldown = 25;
+      this.kickType = type;
+      return true;
+    }
+    // Allow upgrading an already-armed shot into a lob while the kick window is open
+    if (type === 'lob' && this.kicking > 0) {
+      this.kickType = 'lob';
       return true;
     }
     return false;
@@ -182,7 +192,7 @@ function collideBallPlayer(ball, player) {
       let ny = dist === 0 ? -1 : dy / dist;
       ball.x += nx * overlap;
       ball.y += ny * overlap;
-      
+
       // impart velocity from player + reflection
       const relvx = ball.vx - player.vx;
       const relvy = ball.vy - player.vy;
@@ -191,15 +201,27 @@ function collideBallPlayer(ball, player) {
         ball.vx = ball.vx - (1 + 0.6) * vn * nx + player.vx * 0.5;
         ball.vy = ball.vy - (1 + 0.6) * vn * ny + player.vy * 0.5;
       }
+
+      // BUGFIX: a passive hit on our BACK (own-goal side of the body) must not
+      // shove the ball into our own goal. Kill velocity heading toward own goal.
+      if (Math.sign(nx) === player.ownGoalDir && Math.sign(ball.vx) === player.ownGoalDir) {
+        ball.vx *= 0.2;
+      }
     }
 
-    // Kick action boost
+    // Kick action boost (foot). Lob = chip up; Shot = flat drive.
     if (player.kicking > 0 && player.kickCooldown > 10) {
       // Boot power scaling (0.5 power per bonus point)
       const currentKickPower = KICK_POWER + (player.boot.powBonus * 0.5);
 
-      ball.vx = player.facing * currentKickPower + player.vx;
-      ball.vy = KICK_LIFT - 5 - (player.boot.powBonus * 0.2) + Math.min(0, player.vy); // Added more upward lift (-5)
+      if (player.kickType === 'lob') {
+        // Aşırtma: less horizontal, strong upward arc (chip over the opponent)
+        ball.vx = player.facing * currentKickPower * 0.5 + player.vx * 0.5;
+        ball.vy = LOB_LIFT - (player.boot.powBonus * 0.3) + Math.min(0, player.vy);
+      } else {
+        ball.vx = player.facing * currentKickPower + player.vx;
+        ball.vy = KICK_LIFT - 5 - (player.boot.powBonus * 0.2) + Math.min(0, player.vy); // Added more upward lift (-5)
+      }
       audio.kick();
       player.kicking = 0; // End kick so it only hits once
     }
@@ -215,10 +237,18 @@ function collideBallPlayer(ball, player) {
     const ny = hdist === 0 ? -1 : hdy / hdist;
     ball.x += nx * overlap;
     ball.y += ny * overlap;
-    // Header
-    ball.vx = nx * HEAD_KICK_POWER + player.vx * 0.6;
-    ball.vy = ny * HEAD_KICK_POWER * 0.9 - 3;
-    audio.kick();
+    // BUGFIX: back-of-head hit (own-goal side) must NOT power the ball into our
+    // own net. Only front-of-head hits get the header boost; back hits soft-pop.
+    if (Math.sign(nx) === player.ownGoalDir) {
+      ball.vy = ny * HEAD_KICK_POWER * 0.3 - 4;      // gentle upward pop
+      ball.vx = player.vx * 0.3 - player.ownGoalDir * 2; // nudge away from own goal
+      audio.bounce();
+    } else {
+      // Header (front): full power away from our goal.
+      ball.vx = nx * HEAD_KICK_POWER + player.vx * 0.6;
+      ball.vy = ny * HEAD_KICK_POWER * 0.9 - 3;
+      audio.kick();
+    }
     return true;
   }
   return false;
@@ -231,7 +261,7 @@ export class GameEngine {
     this.player = new Player({ x: 300, side: 'left', color: pTeam.primary, name: pTeam.name || 'YOU', controlled: true, theme: pTeam, bootId: pTeam.bootId });
     this.ai = new Player({ x: FIELD.W - 360, side: 'right', color: aTeam.primary, name: aTeam.name || 'CPU', controlled: false, theme: aTeam, bootId: aTeam.bootId });
     this.mode = mode; // 'ai' | 'host' | 'guest'
-    this.remoteInput = { left: false, right: false, jump: false, shoot: false };
+    this.remoteInput = { left: false, right: false, jump: false, shoot: false, lob: false };
     this.lastRemoteState = null;
     this.stateTickCount = 0;
     this.ball = new Ball();
@@ -246,7 +276,7 @@ export class GameEngine {
     this.onScore = onScore;
     this.onEnd = onEnd;
     this.input = {
-      left: false, right: false, jump: false, shoot: false,
+      left: false, right: false, jump: false, shoot: false, lob: false,
     };
     this.lastSecond = performance.now();
     this.aiState = { thinkTimer: 0 };
@@ -288,7 +318,8 @@ export class GameEngine {
     else if (this.input.right && !this.input.left) this.player.moveRight();
     else this.player.stop();
     if (this.input.jump) this.player.jump();
-    if (this.input.shoot) this.player.tryKick();
+    if (this.input.lob) this.player.tryKick('lob');
+    else if (this.input.shoot) this.player.tryKick('shot');
 
     // AI or remote opponent
     if (this.mode === 'host') this._updateRemoteOpponent();
@@ -341,43 +372,44 @@ export class GameEngine {
     const ball = this.ball;
     ai.vx = 0;
 
-    // difficulty tuning
-    const reactSpeed = PLAYER_SPEED * 0.9;
-    const goalDefendX = FIELD.W - 320;
+    // HARD difficulty (fixed): fast, predictive and aggressive.
+    const reactSpeed = PLAYER_SPEED * 1.12;
+    const goalDefendX = FIELD.W - 300;
+    const half = FIELD.W / 2;
 
-    // Predict ball x
-    const dx = ball.x - (ai.x + ai.w / 2);
+    const aiCenter = ai.x + ai.w / 2;
+    const dx = ball.x - aiCenter;
     const dy = ball.y - (ai.y + ai.h / 2);
 
-    // If ball is on AI half or coming: pursue
-    if (ball.x > FIELD.W / 2 - 200 || ball.vx > 3) {
-      if (Math.abs(dx) > 20) {
-        ai.vx = Math.sign(dx) * reactSpeed;
-        ai.facing = Math.sign(dx) || ai.facing;
+    // Simple horizontal prediction of the ball.
+    const predictX = ball.x + ball.vx * 8;
+    const ballOnAiSide = ball.x > half - 260 || ball.vx > 2.5;
+
+    if (ballOnAiSide) {
+      // Get to the goal side (right) of the ball so it can drive it toward the left goal.
+      const behindTarget = ball.x + 45;
+      const target = ball.vx < -4 ? predictX + 45 : behindTarget;
+      if (Math.abs(target - aiCenter) > 12) {
+        ai.vx = Math.sign(target - aiCenter) * reactSpeed;
       }
-      // Position slightly behind ball to shoot toward left goal
-      if (ball.x < ai.x + ai.w / 2 && Math.abs(dx) < 90 && ai.onGround) {
-        // aim: get behind the ball, then push left
-        if (ball.x > ai.x - 10) ai.vx = -reactSpeed;
-      }
+      ai.facing = -1; // always aim toward opponent goal when engaged
     } else {
-      // Return to defensive spot
-      const target = goalDefendX;
-      if (Math.abs(ai.x - target) > 15) {
-        ai.vx = Math.sign(target - ai.x) * reactSpeed * 0.7;
+      // Hold a high, ready defensive line.
+      if (Math.abs(ai.x - goalDefendX) > 12) {
+        ai.vx = Math.sign(goalDefendX - ai.x) * reactSpeed * 0.85;
       }
+      ai.facing = -1;
     }
 
-    // Jump for high ball
-    if (dy < -80 && dy > -260 && Math.abs(dx) < 110 && ai.onGround) {
+    // Jump to head high balls with good timing.
+    if (dy < -60 && dy > -300 && Math.abs(dx) < 130 && ai.onGround) {
       ai.jump();
     }
 
-    // Kick when near
-    if (Math.abs(dx) < 110 && Math.abs(dy) < 140) {
-      if (ai.kickCooldown <= 0) {
-        ai.tryKick();
-      }
+    // Strike reliably when in range; chip when the ball is close in front.
+    if (Math.abs(dx) < 130 && Math.abs(dy) < 160 && ai.kickCooldown <= 0) {
+      const useLob = ball.x < aiCenter && Math.abs(dx) < 70 && ball.y < ai.y + ai.h - 30;
+      ai.tryKick(useLob ? 'lob' : 'shot');
     }
   }
 
@@ -385,17 +417,19 @@ export class GameEngine {
     const ai = this.ai;
     const inp = this.remoteInput;
     ai.vx = 0;
-    
+
     // Fallback logic for stringified boolean or anything weird
     const isLeft = inp.left === true || inp.left === 'true';
     const isRight = inp.right === true || inp.right === 'true';
     const isJump = inp.jump === true || inp.jump === 'true';
     const isShoot = inp.shoot === true || inp.shoot === 'true';
+    const isLob = inp.lob === true || inp.lob === 'true';
 
     if (isLeft && !isRight) { ai.vx = -ai.moveSpeed; ai.facing = -1; }
     else if (isRight && !isLeft) { ai.vx = ai.moveSpeed; ai.facing = 1; }
     if (isJump) ai.jump();
-    if (isShoot) ai.tryKick();
+    if (isLob) ai.tryKick('lob');
+    else if (isShoot) ai.tryKick('shot');
   }
 
   setRemoteInput(input) {

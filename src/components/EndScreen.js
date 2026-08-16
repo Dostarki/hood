@@ -1,11 +1,11 @@
 import { RotateCcw, Home, Trophy, Sparkles } from 'lucide-react';
 
 export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, records, opponentLeft, onlineMode }) {
-  let title = 'BERABERE';
+  let title = 'DRAW';
   let color = '#FFFFFF';
-  if (scoreL > scoreR) { title = 'KAZANDIN'; color = '#00FF66'; }
-  else if (scoreR > scoreL) { title = 'KAYBETTİN'; color = '#FF3B30'; }
-  if (opponentLeft) { title = 'RAKİP AYRILDI'; color = '#F4E04D'; }
+  if (scoreL > scoreR) { title = 'YOU WIN'; color = '#00FF66'; }
+  else if (scoreR > scoreL) { title = 'YOU LOSE'; color = '#FF3B30'; }
+  if (opponentLeft) { title = 'OPPONENT LEFT'; color = '#F4E04D'; }
 
   const anyRecord = records && (records.newBestWinDiff || records.newMostGoals || records.newBestStreak || records.firstWin);
 
@@ -17,7 +17,7 @@ export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, re
     >
       <div className="grid-noise" />
       <div className="relative w-full max-w-3xl px-8 py-8 fade-in">
-        <div className="font-heading text-white/60 tracking-[0.4em] text-sm mb-2">MAÇ SONA ERDİ</div>
+        <div className="font-heading text-white/60 tracking-[0.4em] text-sm mb-2">MATCH OVER</div>
         <h2
           className="font-heading uppercase leading-none tracking-tighter"
           style={{ color, fontSize: 'clamp(3rem, 10vw, 7rem)' }}
@@ -28,7 +28,7 @@ export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, re
 
         <div className="mt-8 flex items-center gap-6 border border-white/10 bg-black/50 backdrop-blur-md p-6">
           <div className="flex-1 text-center">
-            <div className="font-heading text-white/60 text-sm tracking-widest">SEN</div>
+            <div className="font-heading text-white/60 text-sm tracking-widest">YOU</div>
             <div className="font-heading text-white text-7xl leading-none" data-testid="final-score-left">{scoreL}</div>
           </div>
           <div className="text-white/40 font-heading text-4xl">-</div>
@@ -46,23 +46,23 @@ export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, re
           >
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={18} strokeWidth={2.5} color="#F4E04D" />
-              <div className="font-heading tracking-[0.3em] text-sm" style={{ color: '#F4E04D' }}>YENİ REKOR!</div>
+              <div className="font-heading tracking-[0.3em] text-sm" style={{ color: '#F4E04D' }}>NEW RECORD!</div>
             </div>
             <ul className="text-white/80 font-body text-sm space-y-1">
-              {records.firstWin && <li>· İLK GALİBİYETİN — Tebrikler!</li>}
-              {records.newBestWinDiff && <li>· En büyük fark ile galibiyet: +{stats?.bestWinDiff}</li>}
-              {records.newMostGoals && <li>· Bir maçta atılan en fazla gol: {stats?.mostGoalsInMatch}</li>}
-              {records.newBestStreak && <li>· En uzun galibiyet serisi: {stats?.bestStreak} maç</li>}
+              {records.firstWin && <li>· YOUR FIRST WIN — Congrats!</li>}
+              {records.newBestWinDiff && <li>· Biggest win margin: +{stats?.bestWinDiff}</li>}
+              {records.newMostGoals && <li>· Most goals in a match: {stats?.mostGoalsInMatch}</li>}
+              {records.newBestStreak && <li>· Longest win streak: {stats?.bestStreak} matches</li>}
             </ul>
           </div>
         )}
 
         {stats && stats.played > 0 && (
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border border-white/10 bg-black/40 backdrop-blur-md p-4" data-testid="stats-summary">
-            <StatItem icon={Trophy} label="GALİBİYET" value={stats.wins} color="#00FF66" />
-            <StatItem label="BERABERE" value={stats.draws} color="#FFFFFF" />
-            <StatItem label="MAÇ" value={stats.played} color="#FFFFFF" />
-            <StatItem label="EN İYİ SERİ" value={stats.bestStreak} color="#F4E04D" />
+            <StatItem icon={Trophy} label="WINS" value={stats.wins} color="#00FF66" />
+            <StatItem label="DRAWS" value={stats.draws} color="#FFFFFF" />
+            <StatItem label="PLAYED" value={stats.played} color="#FFFFFF" />
+            <StatItem label="BEST STREAK" value={stats.bestStreak} color="#F4E04D" />
           </div>
         )}
 
@@ -75,7 +75,7 @@ export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, re
               onClick={onRematch}
             >
               <RotateCcw size={20} strokeWidth={3} />
-              YENİDEN OYNA
+              PLAY AGAIN
             </button>
           )}
           <button
@@ -85,7 +85,7 @@ export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, re
             onClick={onMenu}
           >
             <Home size={20} strokeWidth={2.5} />
-            ANA MENÜ
+            MAIN MENU
           </button>
         </div>
       </div>

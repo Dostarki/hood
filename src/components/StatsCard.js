@@ -6,11 +6,11 @@ export default function StatsCard({ stats }) {
   const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
 
   const items = [
-    { icon: Trophy, label: 'GALİBİYET', value: stats.wins, color: '#00FF66' },
-    { icon: Target, label: 'EN İYİ FARK', value: stats.bestWinDiff > 0 ? `+${stats.bestWinDiff}` : '—', color: '#F4E04D' },
-    { icon: Shield, label: 'GOL YEMEDEN', value: stats.cleanSheets, color: '#4CC9F0' },
-    { icon: Flame, label: 'SERİ', value: stats.bestStreak, color: '#FF3B30' },
-    { icon: TrendingUp, label: 'BAŞARI', value: `${winRate}%`, color: '#FFFFFF' },
+    { icon: Trophy, label: 'WINS', value: stats.wins, color: '#00FF66' },
+    { icon: Target, label: 'BEST DIFF', value: stats.bestWinDiff > 0 ? `+${stats.bestWinDiff}` : '—', color: '#F4E04D' },
+    { icon: Shield, label: 'CLEAN SHEETS', value: stats.cleanSheets, color: '#4CC9F0' },
+    { icon: Flame, label: 'STREAK', value: stats.bestStreak, color: '#FF3B30' },
+    { icon: TrendingUp, label: 'WIN RATE', value: `${winRate}%`, color: '#FFFFFF' },
   ];
 
   if (stats.played === 0) {
@@ -21,7 +21,7 @@ export default function StatsCard({ stats }) {
       >
         <Trophy size={18} strokeWidth={2.5} color="#F4E04D" />
         <div className="font-heading tracking-widest text-white/80 text-sm">
-          İLK MAÇINI OYNA <span className="text-[#00FF66]">→</span>
+          PLAY YOUR FIRST MATCH <span className="text-[#00FF66]">→</span>
         </div>
       </div>
     );
@@ -33,9 +33,9 @@ export default function StatsCard({ stats }) {
       className="border border-white/10 bg-black/50 backdrop-blur-md p-5 sm:p-6"
     >
       <div className="flex items-center justify-between mb-4">
-        <div className="font-heading text-white/50 tracking-[0.3em] text-xs">İSTATİSTİKLER</div>
+        <div className="font-heading text-white/50 tracking-[0.3em] text-xs">STATS</div>
         <div className="font-heading text-white/80 text-sm tracking-widest">
-          {stats.played} MAÇ · {stats.wins}G {stats.draws}B {stats.losses}M
+          {stats.played} PLAYED · {stats.wins}W {stats.draws}D {stats.losses}L
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">

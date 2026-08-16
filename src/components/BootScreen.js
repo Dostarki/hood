@@ -44,11 +44,11 @@ function BootCard({ boot, selected, onClick, testId }) {
       <div className="flex justify-between px-4 py-2 border-t border-white/10 bg-black/40">
         <div className="flex items-center gap-1">
           <FastForward size={14} color="#00FF66" />
-          <span className="font-heading text-xs text-white/80 tracking-wider">HIZ: +{boot.spdBonus}</span>
+          <span className="font-heading text-xs text-white/80 tracking-wider">SPD: +{boot.spdBonus}</span>
         </div>
         <div className="flex items-center gap-1">
           <Zap size={14} color="#F4E04D" />
-          <span className="font-heading text-xs text-white/80 tracking-wider">ŞUT: +{boot.powBonus}</span>
+          <span className="font-heading text-xs text-white/80 tracking-wider">SHOT: +{boot.powBonus}</span>
         </div>
       </div>
     </button>
@@ -83,18 +83,18 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
           className="flex items-center gap-2 text-white/60 hover:text-white transition-colors font-heading tracking-widest text-sm mb-8"
           onClick={() => { audio.menuBack(); onBack(); }}
         >
-          <ArrowLeft size={16} strokeWidth={2.5} /> GERİ
+          <ArrowLeft size={16} strokeWidth={2.5} /> BACK
         </button>
 
         <div className="flex items-center gap-3 mb-4">
           <div className="h-3 w-3" style={{ background: boot.color }} />
-          <div className="font-heading text-sm tracking-[0.4em] text-white/70">KRAMPON SEÇİMİ</div>
+          <div className="font-heading text-sm tracking-[0.4em] text-white/70">SHOP</div>
         </div>
         <h2
           className="font-heading uppercase text-white leading-none tracking-tighter"
           style={{ fontSize: 'clamp(2.5rem, 8vw, 5.5rem)' }}
         >
-          AYAKKABINI <span style={{ color: boot.color }}>SEÇ</span>
+          CHOOSE YOUR <span style={{ color: boot.color }}>BOOTS</span>
         </h2>
         <p className="font-heading text-white/60 tracking-widest mt-2">{boot.desc}</p>
 
@@ -125,7 +125,7 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
 
         {/* Grid of all boots as quick-pick */}
         <div className="mt-12 max-w-4xl mx-auto">
-          <div className="font-heading text-white/50 tracking-[0.3em] text-xs mb-3 text-center">HIZLI SEÇİM</div>
+          <div className="font-heading text-white/50 tracking-[0.3em] text-xs mb-3 text-center">QUICK SELECT</div>
           <div className="flex flex-wrap justify-center gap-4">
             {BOOTS.map((b) => {
               const isSelected = b.id === bootId;
@@ -144,8 +144,8 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
                 >
                   <div className="font-heading text-sm tracking-widest mt-1" style={{ color: isSelected ? b.color : '#ffffff90' }}>{b.name}</div>
                   <div className="flex gap-2 mt-1">
-                    <span className="text-xs text-[#00FF66]">H:{b.spdBonus}</span>
-                    <span className="text-xs text-[#F4E04D]">Ş:{b.powBonus}</span>
+                    <span className="text-xs text-[#00FF66]">S:{b.spdBonus}</span>
+                    <span className="text-xs text-[#F4E04D]">P:{b.powBonus}</span>
                   </div>
                 </button>
               );
@@ -160,7 +160,7 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
             className="btn-brutal flex items-center gap-3"
             onClick={handleSave}
           >
-            GİY VE KAYDET
+            EQUIP & SAVE
           </button>
         </div>
       </div>

@@ -8,12 +8,12 @@ export default function PauseOverlay({ onResume, onMenu }) {
       data-testid="pause-overlay"
     >
       <div className="w-full max-w-lg px-8 text-center fade-in">
-        <div className="font-heading text-white/50 tracking-[0.4em] text-sm mb-2">DURDURULDU</div>
+        <div className="font-heading text-white/50 tracking-[0.4em] text-sm mb-2">GAME PAUSED</div>
         <div
           className="font-heading uppercase leading-none tracking-tighter text-white"
           style={{ fontSize: 'clamp(3rem, 9vw, 6rem)' }}
         >
-          MOLA
+          PAUSED
         </div>
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <button
@@ -23,7 +23,7 @@ export default function PauseOverlay({ onResume, onMenu }) {
             onClick={onResume}
           >
             <Play size={20} strokeWidth={3} />
-            DEVAM
+            RESUME
           </button>
           <button
             type="button"
@@ -32,7 +32,7 @@ export default function PauseOverlay({ onResume, onMenu }) {
             onClick={onMenu}
           >
             <Home size={20} strokeWidth={2.5} />
-            ANA MENÜ
+            MAIN MENU
           </button>
         </div>
       </div>

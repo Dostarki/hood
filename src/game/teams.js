@@ -4,7 +4,7 @@ import { Zap, Flame, Waves, Crown, Gem, Sparkles, Heart, Snowflake, User, Ghost,
 export const TEAMS = [
   {
     id: 'ape',
-    name: 'KRAL MAYMUN',
+    name: 'KING APE',
     primary: '#F4A261',
     hair: '#5A4033', // Fur color
     skin: '#D4B595', // Muzzle color
@@ -24,14 +24,14 @@ export const TEAMS = [
   },
   {
     id: 'penguin',
-    name: 'PENGUEN',
+    name: 'PENGUIN',
     primary: '#7AB2FF',
     type: 'penguin',
     icon: Snowflake,
   },
   {
     id: 'catgirl',
-    name: 'KEDİ KIZ',
+    name: 'CAT GIRL',
     primary: '#98D6A4',
     type: 'anime',
     icon: Heart,
@@ -46,7 +46,7 @@ export const TEAMS = [
   },
   {
     id: 'punk_smoke',
-    name: 'PUNK SİGARA',
+    name: 'PUNK SMOKE',
     primary: '#D95A00',
     type: 'pixel',
     variant: 'smoke',
@@ -54,7 +54,7 @@ export const TEAMS = [
   },
   {
     id: 'ninja',
-    name: 'NİNJA',
+    name: 'NINJA',
     primary: '#111111',
     type: 'standard',
     skin: '#F5D6B5',
@@ -71,7 +71,7 @@ export const TEAMS = [
   },
   {
     id: 'zombie',
-    name: 'ZOMBİ',
+    name: 'ZOMBIE',
     primary: '#8FBC8F',
     type: 'standard',
     skin: '#8FBC8F',
@@ -81,14 +81,14 @@ export const TEAMS = [
   },
   {
     id: 'alien',
-    name: 'UZAYLI',
+    name: 'ALIEN',
     primary: '#00FF00',
     type: 'alien',
     icon: Sparkles,
   },
   {
     id: 'demon',
-    name: 'İBLİS',
+    name: 'DEMON',
     primary: '#FF4500',
     type: 'standard',
     skin: '#FF4500',
@@ -98,7 +98,7 @@ export const TEAMS = [
   },
   {
     id: 'angel',
-    name: 'MELEK',
+    name: 'ANGEL',
     primary: '#FFD700',
     type: 'standard',
     skin: '#FFF0F5',
@@ -108,7 +108,7 @@ export const TEAMS = [
   },
   {
     id: 'clown',
-    name: 'PALYAÇO',
+    name: 'CLOWN',
     primary: '#FF1493',
     type: 'standard',
     skin: '#FFFFFF',
@@ -119,7 +119,7 @@ export const TEAMS = [
   },
   {
     id: 'pirate',
-    name: 'KORSAN',
+    name: 'PIRATE',
     primary: '#8B4513',
     type: 'standard',
     skin: '#D2B48C',
@@ -129,7 +129,7 @@ export const TEAMS = [
   },
   {
     id: 'vampire',
-    name: 'VAMPİR',
+    name: 'VAMPIRE',
     primary: '#8B0000',
     type: 'standard',
     skin: '#F8F8FF',
@@ -140,7 +140,7 @@ export const TEAMS = [
   },
   {
     id: 'cyborg',
-    name: 'SAYBORG',
+    name: 'CYBORG',
     primary: '#E0A98C',
     type: 'standard',
     skin: '#E0A98C',

@@ -8,6 +8,7 @@ import PauseOverlay from '@/components/PauseOverlay';
 import ProfileScreen from '@/components/ProfileScreen';
 import BootScreen from '@/components/BootScreen';
 import Matchmaking from '@/components/Matchmaking';
+import RankedStake from '@/components/RankedStake';
 import { useKeyboardInput } from '@/hooks/useInput';
 import { useIsMobile } from '@/hooks/useMobile';
 import { audio } from '@/game/audio';
@@ -20,6 +21,7 @@ const STATE = {
   MENU: 'menu',
   PROFILE: 'profile',
   BOOTS: 'boots',
+  STAKE: 'stake',
   MATCHMAKING: 'matchmaking',
   PLAYING: 'playing',
   PAUSED: 'paused',
@@ -40,6 +42,7 @@ export default function Game() {
   const [matchRecords, setMatchRecords] = useState(null);
   const [gameMode, setGameMode] = useState('ai'); // 'ai' | 'host' | 'guest'
   const [onlineInfo, setOnlineInfo] = useState(null); // { opponentName, opponentLeft }
+  const [rankedStake, setRankedStake] = useState(10); // selected ranked stake in USD
   const engineRef = useRef(null);
   const isMobile = useIsMobile();
 
@@ -131,6 +134,12 @@ export default function Game() {
     setState(STATE.PROFILE);
   }, []);
 
+  const openStakeSelect = useCallback(() => {
+    audio.init();
+    audio.resume();
+    setState(STATE.STAKE);
+  }, []);
+
   const openMatchmaking = useCallback(() => {
     audio.init();
     audio.resume();
@@ -171,10 +180,6 @@ export default function Game() {
 
   const startOnlineMatch = useCallback(({ role, opponent, opponentTeam }) => {
     // In online: host is LEFT (playerTeam), guest is RIGHT (opponentTeam)
-    // For host: player = you, ai = opponent
-    // For guest: player displayed on LEFT is HOST (opponent), ai on RIGHT is YOU
-    // Simpler: always render host on left. So guest's team becomes 'ai' side, guest sees themselves controlling right.
-    // But then guest inputs need to be inverted vs. their own perspective? Actually no - guest presses "right" to move their character right, and their character IS on the right side. Movements match visually. 
     let leftTeam, rightTeam;
     if (role === 'host') {
       leftTeam = { ...playerTeam, bootId };
@@ -188,7 +193,7 @@ export default function Game() {
     setFinalScore({ scoreL: 0, scoreR: 0 });
     setMatchRecords(null);
     setGameMode(role);
-    setOnlineInfo({ opponentName: opponent?.name || 'Rakip', role, leftTeam, rightTeam });
+    setOnlineInfo({ opponentName: opponent?.name || 'Opponent', role, leftTeam, rightTeam });
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [playerTeam, bootId]);
@@ -318,7 +323,7 @@ export default function Game() {
           onStartAiMatch={startAiMatch}
           onOpenProfile={openProfile}
           onOpenBoots={openBoots}
-          onFindMatch={openMatchmaking}
+          onFindMatch={openStakeSelect}
           soundOn={soundOn}
           onToggleSound={toggleSound}
           stats={stats}
@@ -339,10 +344,17 @@ export default function Game() {
           onSave={saveBoots}
         />
       )}
+      {state === STATE.STAKE && (
+        <RankedStake
+          onBack={() => setState(STATE.MENU)}
+          onSelect={(s) => { setRankedStake(s); openMatchmaking(); }}
+        />
+      )}
       {state === STATE.MATCHMAKING && (
         <Matchmaking
           playerTeam={playerTeam}
           playerName={playerTeam.name}
+          stake={rankedStake}
           onCancel={cancelMatchmaking}
           onMatched={startOnlineMatch}
         />

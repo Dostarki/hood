@@ -33,6 +33,7 @@ export function draw(ctx, engine, canvasW, canvasH) {
 
   drawSky(ctx);
   drawWallAndGraffiti(ctx);
+  drawStreetlights(ctx);
   drawCrowd(ctx, celebrating);
   drawFence(ctx);
   drawPitch(ctx);
@@ -50,307 +51,498 @@ export function draw(ctx, engine, canvasW, canvasH) {
 
 function drawSky(ctx) {
   // Light blue day sky
-  const g = ctx.createLinearGradient(0, 0, 0, 150);
-  g.addColorStop(0, '#57A0D3');
-  g.addColorStop(1, '#90CDEB');
+  const g = ctx.createLinearGradient(0, 0, 0, 320);
+  g.addColorStop(0, '#5BA8D4');
+  g.addColorStop(1, '#8FCBE8');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, FIELD.W, 150);
+  ctx.fillRect(0, 0, FIELD.W, 320);
 
   // Simple clouds
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
   ctx.beginPath();
-  ctx.arc(200, 60, 30, 0, Math.PI * 2);
-  ctx.arc(240, 50, 40, 0, Math.PI * 2);
-  ctx.arc(280, 60, 30, 0, Math.PI * 2);
+  ctx.arc(230, 55, 26, 0, Math.PI * 2);
+  ctx.arc(268, 45, 34, 0, Math.PI * 2);
+  ctx.arc(306, 55, 26, 0, Math.PI * 2);
   ctx.fill();
-
   ctx.beginPath();
-  ctx.arc(800, 80, 40, 0, Math.PI * 2);
-  ctx.arc(850, 60, 50, 0, Math.PI * 2);
-  ctx.arc(900, 80, 40, 0, Math.PI * 2);
+  ctx.arc(1180, 70, 32, 0, Math.PI * 2);
+  ctx.arc(1225, 55, 42, 0, Math.PI * 2);
+  ctx.arc(1272, 70, 32, 0, Math.PI * 2);
   ctx.fill();
 }
 
+const WALL_TOP = 130;
+const WALL_BOT = 470;
+const FENCE_TOP = 165;
+
 function drawWallAndGraffiti(ctx) {
-  const wallTopY = 120;
-  const wallBotY = 300;
+  // Concrete wall
+  const wg = ctx.createLinearGradient(0, WALL_TOP, 0, WALL_BOT);
+  wg.addColorStop(0, '#9A948A');
+  wg.addColorStop(1, '#7E786E');
+  ctx.fillStyle = wg;
+  ctx.fillRect(0, WALL_TOP, FIELD.W, WALL_BOT - WALL_TOP);
 
-  // Modern Stadium Wall
-  ctx.fillStyle = '#1A1A24'; // Dark modern base
-  ctx.fillRect(0, wallTopY, FIELD.W, wallBotY - wallTopY);
+  // Wall coping (top edge)
+  ctx.fillStyle = '#B3ADA2';
+  ctx.fillRect(0, WALL_TOP - 10, FIELD.W, 14);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0, WALL_TOP + 4, FIELD.W, 5);
 
-  // Modern Stadium Banners (like reference image)
-  const bannerY = 220;
-  const bannerH = 60;
-  ctx.fillStyle = '#0F101A';
-  ctx.fillRect(0, bannerY, FIELD.W, bannerH);
-  
-  // Neon glowing strip
-  ctx.fillStyle = '#00F0FF';
-  ctx.fillRect(0, bannerY, FIELD.W, 4);
-  ctx.fillStyle = '#FF0055';
-  ctx.fillRect(0, bannerY + bannerH - 4, FIELD.W, 4);
-
-  // Digital Ad Boards (Mockups)
-  const drawAd = (x, color, text) => {
-    ctx.fillStyle = color;
-    roundRect(ctx, x, bannerY + 10, 160, 40, 4);
-    ctx.fill();
-    ctx.fillStyle = '#FFF';
-    ctx.font = 'bold 24px "Bebas Neue", sans-serif';
-    ctx.fillText(text, x + 80, bannerY + 38);
-  };
-  
-  ctx.textAlign = 'center';
-  drawAd(100, '#E63946', 'CHICKEN BURGER');
-  drawAd(400, '#457B9D', 'PLAY NOW');
-  drawAd(740, '#E63946', 'BURGER KING');
-
-  // Bleachers (Trübünler) behind the fence
-  const bleacherTopY = 300;
-  const bleacherBotY = FIELD.GROUND_Y - 20; // Around 480
-  
-  // Tiered stadium seating with neon accents
-  const bg = ctx.createLinearGradient(0, bleacherTopY, 0, bleacherBotY);
-  bg.addColorStop(0, '#2A2A35');
-  bg.addColorStop(1, '#1A1A24');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, bleacherTopY, FIELD.W, bleacherBotY - bleacherTopY);
-  
-  // Bleacher steps (more prominent)
-  ctx.strokeStyle = '#0F101A';
-  ctx.lineWidth = 4;
-  for (let y = bleacherTopY; y < bleacherBotY; y += 30) {
+  // Concrete panel seams
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = 3;
+  for (let x = 200; x < FIELD.W; x += 200) {
     ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(FIELD.W, y);
+    ctx.moveTo(x, WALL_TOP);
+    ctx.lineTo(x, WALL_BOT);
     ctx.stroke();
-    // Neon step edge
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.1)';
-    ctx.fillRect(0, y - 4, FIELD.W, 2);
   }
+
+  // Stains / weathering
+  for (let i = 0; i < 14; i++) {
+    const sx = rand(i * 31) * FIELD.W;
+    const sy = WALL_TOP + 30 + rand(i * 57) * (WALL_BOT - WALL_TOP - 80);
+    ctx.fillStyle = `rgba(60, 55, 45, ${0.05 + rand(i * 7) * 0.08})`;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 40 + rand(i * 13) * 60, 20 + rand(i * 17) * 30, rand(i) * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawGraffiti(ctx);
+
+  // Darker strip at the base of the wall (ground behind crowd)
+  const baseG = ctx.createLinearGradient(0, WALL_BOT, 0, FIELD.GROUND_Y);
+  baseG.addColorStop(0, '#6E685E');
+  baseG.addColorStop(1, '#57524A');
+  ctx.fillStyle = baseG;
+  ctx.fillRect(0, WALL_BOT, FIELD.W, FIELD.GROUND_Y - WALL_BOT);
+}
+
+function drawGraffiti(ctx) {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const tag = (x, y, text, size, color, outline, rot) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.font = `bold ${size}px "Bebas Neue", Impact, sans-serif`;
+    ctx.globalAlpha = 0.75;
+    if (outline) {
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = size * 0.14;
+      ctx.strokeText(text, 0, 0);
+    }
+    ctx.fillStyle = color;
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  };
+
+  tag(380, 235, 'STREET', 96, '#8E7CC3', '#4A3B77', -0.05);
+  tag(820, 300, 'KING', 110, '#4CAF50', '#2E5E32', 0.06);
+  tag(1230, 240, 'GOAL!', 88, '#D96C6C', '#7E3030', -0.08);
+  tag(180, 340, '\u2605', 70, '#E9C46A', null, 0.2);
+  tag(1450, 330, '99', 76, '#5BC0BE', '#2F6B6A', 0.1);
+
+  // Spray splats
+  ctx.globalAlpha = 0.35;
+  const splats = [[560, 200, 28, '#B565A7'], [1030, 210, 22, '#6BAF6E'], [700, 380, 26, '#D9A05B']];
+  splats.forEach(([x, y, r, c]) => {
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(x + (rand(x + i) - 0.5) * r * 3.4, y + (rand(y + i) - 0.5) * r * 2.6, r * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Drip lines
+  ctx.globalAlpha = 0.3;
+  ctx.strokeStyle = '#4A3B77';
+  ctx.lineWidth = 4;
+  [350, 410, 830, 1250].forEach((x) => {
+    ctx.beginPath();
+    ctx.moveTo(x, 270);
+    ctx.lineTo(x, 270 + 30 + rand(x) * 40);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawStreetlights(ctx) {
+  const drawLamp = (x, dir) => {
+    // Pole
+    ctx.fillStyle = '#6B7280';
+    ctx.fillRect(x - 7, 60, 14, WALL_BOT - 60);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x + 2, 60, 5, WALL_BOT - 60);
+
+    // Curved arm toward the field
+    ctx.strokeStyle = '#6B7280';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, 70);
+    ctx.quadraticCurveTo(x + dir * 55, 48, x + dir * 105, 55);
+    ctx.stroke();
+
+    // Lamp head
+    ctx.fillStyle = '#4B5563';
+    roundRect(ctx, x + dir * 105 - 32, 48, 64, 22, 8);
+    ctx.fill();
+    // Light glass
+    ctx.fillStyle = '#FFF3C4';
+    ctx.beginPath();
+    ctx.ellipse(x + dir * 105, 72, 22, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  drawLamp(150, 1);
+  drawLamp(FIELD.W - 150, -1);
 }
 
 function drawFence(ctx) {
-  // We'll replace the basic fence with a modern stadium barrier / LED board line
-  const barrierTop = FIELD.GROUND_Y - 30;
-  const barrierBot = FIELD.GROUND_Y;
+  // Chain-link fence between crowd and pitch
+  const top = FENCE_TOP;
+  const bot = FIELD.GROUND_Y - 4;
 
-  // Barrier Base
-  ctx.fillStyle = '#0F101A';
-  ctx.fillRect(0, barrierTop, FIELD.W, barrierBot - barrierTop);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, top - 12, FIELD.W, bot - top + 20);
+  ctx.clip();
 
-  // Top rail (Glowing)
-  ctx.fillStyle = '#00F0FF';
-  ctx.fillRect(0, barrierTop, FIELD.W, 4);
-
-  // Digital Ad pattern on the barrier
-  for (let x = 20; x < FIELD.W; x += 300) {
-    ctx.fillStyle = '#1A1A24';
-    ctx.fillRect(x, barrierTop + 8, 260, 16);
-    
-    // Fake LED dots
-    ctx.fillStyle = `rgba(255, 0, 85, ${0.5 + Math.sin(frame * 0.1 + x) * 0.3})`;
-    for (let i = 0; i < 250; i += 8) {
-      ctx.fillRect(x + i, barrierTop + 10, 4, 12);
-    }
+  // Diamond mesh
+  ctx.strokeStyle = 'rgba(225, 228, 232, 0.45)';
+  ctx.lineWidth = 2;
+  const step = 34;
+  ctx.beginPath();
+  for (let x = -((bot - top)); x < FIELD.W + step; x += step) {
+    ctx.moveTo(x, top);
+    ctx.lineTo(x + (bot - top), bot);
+    ctx.moveTo(x + (bot - top), top);
+    ctx.lineTo(x, bot);
   }
+  ctx.stroke();
+
+  // Fence posts
+  ctx.fillStyle = '#8A9199';
+  for (let x = 60; x < FIELD.W; x += 245) {
+    ctx.fillRect(x - 5, top - 8, 10, bot - top + 8);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(x + 1, top - 8, 4, bot - top + 8);
+    ctx.fillStyle = '#8A9199';
+  }
+
+  // Top and bottom rails
+  ctx.fillStyle = '#9CA3AB';
+  ctx.fillRect(0, top - 10, FIELD.W, 8);
+  ctx.fillRect(0, bot - 4, FIELD.W, 6);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillRect(0, top - 10, FIELD.W, 2);
+
+  ctx.restore();
 }
 
 function drawCrowd(ctx, celebrating) {
-  // Adjusted tiers to match the bleachers area (300 to 460)
-  const tiers = [
-    { y: 310, r: 16, spacing: 35 },
-    { y: 345, r: 18, spacing: 40 },
-    { y: 385, r: 20, spacing: 45 },
-    { y: 430, r: 22, spacing: 50 },
+  // Standing crowd rows behind the fence, in front of the graffiti wall
+  const rows = [
+    { y: 415, r: 20, spacing: 78, off: 0 },
+    { y: 452, r: 23, spacing: 74, off: 38 },
   ];
-  const shirtColors = ['#E63946', '#F4A261', '#2A9D8F', '#00FF66', '#457B9D', '#F1FAEE', '#E9C46A', '#EF476F', '#7209B7', '#4CC9F0'];
+  const shirtColors = ['#C0392B', '#7D9A45', '#8E6FAD', '#3E7CA6', '#D9822B', '#4E4E56', '#B8A24A', '#2A9D8F', '#94553D'];
   const skinColors = ['#F5D6B5', '#E0A98C', '#C68962', '#8D5A3B', '#5D3A26'];
 
-  tiers.forEach((tier, ti) => {
-    const waveSpeed = celebrating ? 0.12 : 0.04;
-    const waveMag = celebrating ? 7 : 3;
-    const wave = Math.sin(frame * waveSpeed + ti * 0.7) * waveMag;
+  rows.forEach((row, ti) => {
+    const waveSpeed = celebrating ? 0.14 : 0.05;
+    const waveMag = celebrating ? 8 : 3;
 
-    for (let x = 20; x < FIELD.W; x += tier.spacing) {
+    for (let x = 30 + row.off; x < FIELD.W; x += row.spacing) {
       const seed = ti * 1000 + x;
       const shirt = shirtColors[Math.floor(rand(seed) * shirtColors.length)];
       const skin = skinColors[Math.floor(rand(seed + 1) * skinColors.length)];
-      const baseCheer = Math.sin(frame * 0.08 + seed * 0.13) > 0.3;
+      const baseCheer = Math.sin(frame * 0.08 + seed * 0.13) > 0.35;
       const cheer = celebrating ? true : baseCheer;
-      const yOff = ti % 2 === 0 ? wave : -wave;
-      const armLift = cheer ? (celebrating ? -15 : -8) : 0;
+      const yOff = Math.sin(frame * waveSpeed + x * 0.05) * waveMag * (cheer ? 1 : 0.3);
+      const r = row.r * (0.9 + rand(seed + 3) * 0.25);
+      const by = row.y + yOff;
 
-      // Torso
+      // Pants (lower body, darker)
+      const torsoH = r * 2.2;
+      ctx.fillStyle = ['#3B4252', '#4A3728', '#2F3B4C', '#503A50'][Math.floor(rand(seed + 5) * 4)];
+      ctx.fillRect(x - r * 0.7, by + torsoH - 6, r * 1.4, FIELD.GROUND_Y - (by + torsoH) + 4);
+
+      // Shirt (upper torso)
       ctx.fillStyle = shirt;
-      roundRect(ctx, x - tier.r * 0.8, tier.y + yOff, tier.r * 1.6, tier.r * 1.5, 4);
+      roundRect(ctx, x - r * 0.85, by, r * 1.7, torsoH, r * 0.5);
       ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
 
-      // Arms (raised when cheering)
+      // Arms raised when cheering
       if (cheer) {
-        ctx.fillStyle = skin;
-        ctx.fillRect(x - tier.r * 1.1, tier.y + yOff + armLift, 5, tier.r);
-        ctx.fillRect(x + tier.r * 0.7, tier.y + yOff + armLift, 5, tier.r);
+        ctx.strokeStyle = skin;
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - r * 0.8, by + r * 0.5);
+        ctx.lineTo(x - r * 1.4, by - r * 0.9);
+        ctx.moveTo(x + r * 0.8, by + r * 0.5);
+        ctx.lineTo(x + r * 1.4, by - r * 0.9);
+        ctx.stroke();
       }
 
-      // Head (Big cartoonish head for crowd too)
+      // Big cartoon head
+      const headY = by - r * 0.75;
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.arc(x, tier.y + yOff - tier.r * 0.6, tier.r * 0.9, 0, Math.PI * 2);
+      ctx.arc(x, headY, r * 0.95, 0, Math.PI * 2);
       ctx.fill();
-      
-      // Face details (Eyes/Mouth)
-      ctx.fillStyle = '#000';
-      ctx.fillRect(x - tier.r * 0.4, tier.y + yOff - tier.r * 0.8, 3, 3);
-      ctx.fillRect(x + tier.r * 0.2, tier.y + yOff - tier.r * 0.8, 3, 3);
-      if (cheer) {
-        ctx.beginPath();
-        ctx.arc(x, tier.y + yOff - tier.r * 0.3, 4, 0, Math.PI);
-        ctx.fill();
-      } else {
-        ctx.fillRect(x - tier.r * 0.2, tier.y + yOff - tier.r * 0.3, tier.r * 0.4, 2);
-      }
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
 
       // Hair
-      const hairColor = ['#3E2723', '#000000', '#D4AF37', '#8B4513'][Math.floor(rand(seed + 2) * 4)];
+      const hairColor = ['#3E2723', '#000000', '#C99B3F', '#8B4513', '#B03A2E'][Math.floor(rand(seed + 2) * 5)];
       ctx.fillStyle = hairColor;
       ctx.beginPath();
-      ctx.arc(x, tier.y + yOff - tier.r * 0.9, tier.r * 0.8, Math.PI, 0);
+      ctx.arc(x, headY - r * 0.25, r * 0.85, Math.PI, 0);
       ctx.fill();
+
+      // Face
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - r * 0.38, headY - r * 0.12, 4, 4);
+      ctx.fillRect(x + r * 0.22, headY - r * 0.12, 4, 4);
+      if (cheer) {
+        ctx.beginPath();
+        ctx.arc(x, headY + r * 0.35, r * 0.28, 0, Math.PI);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x - r * 0.2, headY + r * 0.35, r * 0.4, 3);
+      }
     }
   });
 }
 
 function drawPitch(ctx) {
-  // Grass field with alternating stripes
-  const stripes = 14;
+  const dirtTop = FIELD.H - 130;
+
+  // Base grass
+  ctx.fillStyle = '#4E9B47';
+  ctx.fillRect(0, FIELD.GROUND_Y, FIELD.W, dirtTop - FIELD.GROUND_Y);
+
+  // Subtle mow stripes
+  const stripes = 12;
   const stripeW = FIELD.W / stripes;
-  for (let i = 0; i < stripes; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#43A047' : '#388E3C'; // Brighter green grass
-    ctx.fillRect(i * stripeW, FIELD.GROUND_Y, stripeW, FIELD.H - FIELD.GROUND_Y);
+  for (let i = 0; i < stripes; i += 2) {
+    ctx.fillStyle = 'rgba(0, 60, 0, 0.08)';
+    ctx.fillRect(i * stripeW, FIELD.GROUND_Y, stripeW, dirtTop - FIELD.GROUND_Y);
   }
 
-  // Dirt/mud at the bottom edge of the pitch
-  const dirtHeight = 30;
-  ctx.fillStyle = '#6D4C41'; // Dirt color
-  ctx.fillRect(0, FIELD.H - dirtHeight, FIELD.W, dirtHeight);
+  // Worn dirt patches on the grass
+  ctx.fillStyle = '#C79A57';
+  const patches = [
+    [140, FIELD.GROUND_Y + 55, 85, 22], [420, FIELD.GROUND_Y + 105, 60, 16],
+    [760, FIELD.GROUND_Y + 40, 55, 14], [1010, FIELD.GROUND_Y + 120, 75, 20],
+    [1320, FIELD.GROUND_Y + 60, 90, 24], [620, FIELD.GROUND_Y + 150, 50, 13],
+    [1490, FIELD.GROUND_Y + 130, 55, 16], [260, FIELD.GROUND_Y + 145, 45, 12],
+  ];
+  patches.forEach(([px, py, rw, rh], i) => {
+    ctx.globalAlpha = 0.55 + rand(i * 11) * 0.25;
+    ctx.beginPath();
+    ctx.ellipse(px, py, rw, rh, rand(i) * 0.4 - 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 
-  // Perspective darkening at top of pitch
-  const gp = ctx.createLinearGradient(0, FIELD.GROUND_Y, 0, FIELD.H - dirtHeight);
-  gp.addColorStop(0, 'rgba(0,0,0,0.3)');
-  gp.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = gp;
-  ctx.fillRect(0, FIELD.GROUND_Y, FIELD.W, FIELD.H - FIELD.GROUND_Y - dirtHeight);
+  // Grass edge highlight at the top of pitch
+  ctx.fillStyle = '#66B25C';
+  ctx.fillRect(0, FIELD.GROUND_Y, FIELD.W, 8);
 
-  // Center line
-  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-  ctx.lineWidth = 4;
+  // White field markings
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 5;
+
+  // Touchline (top boundary)
   ctx.beginPath();
-  ctx.moveTo(FIELD.W / 2, FIELD.GROUND_Y);
-  ctx.lineTo(FIELD.W / 2, FIELD.H - dirtHeight);
+  ctx.moveTo(30, FIELD.GROUND_Y + 22);
+  ctx.lineTo(FIELD.W - 30, FIELD.GROUND_Y + 22);
   ctx.stroke();
 
-  // Center circle (half arc)
+  // Center line
   ctx.beginPath();
-  ctx.arc(FIELD.W / 2, FIELD.GROUND_Y, 90, 0, Math.PI);
+  ctx.moveTo(FIELD.W / 2, FIELD.GROUND_Y + 22);
+  ctx.lineTo(FIELD.W / 2, dirtTop - 12);
+  ctx.stroke();
+
+  // Center circle (perspective ellipse)
+  ctx.beginPath();
+  ctx.ellipse(FIELD.W / 2, FIELD.GROUND_Y + 115, 130, 55, 0, 0, Math.PI * 2);
   ctx.stroke();
 
   // Center spot
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.arc(FIELD.W / 2, FIELD.GROUND_Y, 6, 0, Math.PI * 2);
+  ctx.ellipse(FIELD.W / 2, FIELD.GROUND_Y + 115, 8, 4, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Goal areas (small rectangles on both sides)
-  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(FIELD.GOAL_WIDTH, FIELD.GROUND_Y, 160, FIELD.H - FIELD.GROUND_Y - dirtHeight - 20);
-  ctx.strokeRect(FIELD.W - FIELD.GOAL_WIDTH - 160, FIELD.GROUND_Y, 160, FIELD.H - FIELD.GROUND_Y - dirtHeight - 20);
+  // Penalty boxes (perspective trapezoids)
+  const boxH = 150;
+  const drawBox = (isLeft) => {
+    const sign = isLeft ? 1 : -1;
+    const edgeX = isLeft ? 30 : FIELD.W - 30;
+    ctx.beginPath();
+    ctx.moveTo(edgeX + sign * 0, FIELD.GROUND_Y + 22);
+    ctx.lineTo(edgeX + sign * 210, FIELD.GROUND_Y + 22);
+    ctx.lineTo(edgeX + sign * 260, FIELD.GROUND_Y + 22 + boxH);
+    ctx.lineTo(edgeX + sign * 0, FIELD.GROUND_Y + 22 + boxH);
+    ctx.stroke();
+  };
+  drawBox(true);
+  drawBox(false);
+
+  // Dirt ground below the pitch
+  const dg = ctx.createLinearGradient(0, dirtTop, 0, FIELD.H);
+  dg.addColorStop(0, '#8A6034');
+  dg.addColorStop(1, '#6E4A26');
+  ctx.fillStyle = dg;
+  ctx.fillRect(0, dirtTop, FIELD.W, FIELD.H - dirtTop);
+
+  // Grass-to-dirt ragged edge
+  ctx.fillStyle = '#3E7C38';
+  ctx.beginPath();
+  ctx.moveTo(0, dirtTop);
+  for (let x = 0; x < FIELD.W; x += 40) {
+    ctx.lineTo(Math.min(x + 20, FIELD.W), dirtTop + 6 + rand(x) * 8);
+    ctx.lineTo(Math.min(x + 40, FIELD.W), dirtTop);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Dirt speckles / pebbles
+  for (let i = 0; i < 40; i++) {
+    const px = rand(i * 91) * FIELD.W;
+    const py = dirtTop + 20 + rand(i * 37) * (FIELD.H - dirtTop - 30);
+    ctx.fillStyle = `rgba(0,0,0,${0.08 + rand(i * 3) * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(px, py, 6 + rand(i * 5) * 14, 3 + rand(i * 9) * 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawGoal(ctx, side) {
   const isLeft = side === 'left';
-  const x0 = isLeft ? 0 : FIELD.W - FIELD.GOAL_WIDTH;
   const goalTop = FIELD.GROUND_Y - FIELD.GOAL_HEIGHT;
-  
-  // Base Goal Position
-  const backTopX = isLeft ? x0 : x0 + FIELD.GOAL_WIDTH;
-  const frontTopX = isLeft ? x0 + FIELD.GOAL_WIDTH : x0;
-  
-  // Drawing 3D angled net
-  // Draw the back netting (darker)
-  ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
+  const sign = isLeft ? 1 : -1;
+
+  // Front post X (goal line) and back of the net (kept on-screen)
+  const frontX = isLeft ? FIELD.GOAL_WIDTH : FIELD.W - FIELD.GOAL_WIDTH;
+  const backX = isLeft ? 3 : FIELD.W - 3;
+  const backTopY = goalTop + 45;          // net top rear is lower (angled)
+
+  // Net fill (translucent white)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
   ctx.beginPath();
-  ctx.moveTo(backTopX, goalTop + 20); // Top back
-  ctx.lineTo(frontTopX, goalTop);     // Top front (crossbar)
-  ctx.lineTo(frontTopX, FIELD.GROUND_Y); // Bottom front
-  ctx.lineTo(backTopX, FIELD.GROUND_Y);  // Bottom back
+  ctx.moveTo(frontX, goalTop);
+  ctx.lineTo(backX, backTopY);
+  ctx.lineTo(backX, FIELD.GROUND_Y);
+  ctx.lineTo(frontX, FIELD.GROUND_Y);
   ctx.closePath();
   ctx.fill();
 
-  // Net grid pattern (perspective)
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.lineWidth = 1;
+  // Net mesh
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  // Vertical lines
-  for(let i=1; i<10; i++) {
-    const t = i/10;
-    const topX = backTopX + (frontTopX - backTopX) * t;
-    const topY = (goalTop + 20) + (goalTop - (goalTop + 20)) * t;
+  const cols = 7;
+  const rowsN = 9;
+  for (let i = 0; i <= cols; i++) {
+    const t = i / cols;
+    const topX = frontX + (backX - frontX) * t;
+    const topY = goalTop + (backTopY - goalTop) * t;
     ctx.moveTo(topX, topY);
     ctx.lineTo(topX, FIELD.GROUND_Y);
   }
-  // Horizontal lines
-  for(let i=1; i<10; i++) {
-    const t = i/10;
-    const y = FIELD.GROUND_Y - (FIELD.GOAL_HEIGHT * t);
-    const topX = backTopX + (frontTopX - backTopX) * t;
-    // angled horizontal
-    ctx.moveTo(backTopX, y);
-    ctx.lineTo(frontTopX, y);
+  for (let j = 1; j <= rowsN; j++) {
+    const t = j / rowsN;
+    const fy = goalTop + (FIELD.GROUND_Y - goalTop) * t;
+    const byy = backTopY + (FIELD.GROUND_Y - backTopY) * t;
+    ctx.moveTo(frontX, fy);
+    ctx.lineTo(backX, byy);
   }
   ctx.stroke();
 
-  // Goal Posts (thick, stylized like the image)
-  const postColor = isLeft ? '#FF9900' : '#B829FF'; // Left orange/gold, right purple/magenta
-  const postShadow = isLeft ? '#CC5500' : '#7700CC';
-  
-  // Crossbar
-  ctx.fillStyle = postColor;
-  ctx.fillRect(Math.min(backTopX, frontTopX), goalTop - 6, FIELD.GOAL_WIDTH, 12);
-  ctx.fillStyle = postShadow;
-  ctx.fillRect(Math.min(backTopX, frontTopX), goalTop, FIELD.GOAL_WIDTH, 6);
-  
-  // Front Pole
-  ctx.fillStyle = postColor;
-  ctx.fillRect(frontTopX - (isLeft?12:-4), goalTop - 6, 16, FIELD.GOAL_HEIGHT + 6);
-  ctx.fillStyle = postShadow;
-  ctx.fillRect(frontTopX - (isLeft?4:-12), goalTop - 6, 8, FIELD.GOAL_HEIGHT + 6);
+  // === White goal frame (like the reference) ===
+  const postW = 18;
+  const white = '#F4F4F2';
+  const shade = '#C9CBC9';
+  const dark = '#9EA19E';
 
-  // Back Pole (Diagonal Support)
-  ctx.strokeStyle = postColor;
+  // Diagonal back support (from crossbar top to ground behind)
+  ctx.strokeStyle = white;
+  ctx.lineWidth = 11;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(frontX - sign * 4, goalTop + 4);
+  ctx.lineTo(backX, FIELD.GROUND_Y - 2);
+  ctx.stroke();
+  ctx.strokeStyle = shade;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(frontX - sign * 2, goalTop + 8);
+  ctx.lineTo(backX + sign * 2, FIELD.GROUND_Y - 2);
+  ctx.stroke();
+
+  // Bottom back bar
+  ctx.strokeStyle = white;
   ctx.lineWidth = 8;
   ctx.beginPath();
-  ctx.moveTo(frontTopX - (isLeft?4:-4), goalTop);
-  ctx.lineTo(backTopX, FIELD.GROUND_Y);
+  ctx.moveTo(backX, FIELD.GROUND_Y - 3);
+  ctx.lineTo(frontX, FIELD.GROUND_Y - 3);
   ctx.stroke();
 
-  // Glow effect on poles
-  ctx.shadowColor = postColor;
-  ctx.shadowBlur = 10;
-  ctx.strokeStyle = '#FFF';
+  // Front vertical post
+  ctx.fillStyle = white;
+  roundRect(ctx, frontX - postW / 2, goalTop - 6, postW, FIELD.GOAL_HEIGHT + 6, 5);
+  ctx.fill();
+  // Post shading (inner side)
+  ctx.fillStyle = shade;
+  ctx.fillRect(frontX + (isLeft ? 1 : -5), goalTop, 4, FIELD.GOAL_HEIGHT);
+  // Post outline
+  ctx.strokeStyle = dark;
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(frontTopX - (isLeft?4:-4), goalTop);
-  ctx.lineTo(frontTopX - (isLeft?4:-4), FIELD.GROUND_Y);
+  roundRect(ctx, frontX - postW / 2, goalTop - 6, postW, FIELD.GOAL_HEIGHT + 6, 5);
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
-  // Base pole shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  // Crossbar stub (short top bar pointing back)
+  const stubLen = Math.abs(frontX - backX);
+  const stubX = isLeft ? backX : frontX;
+  ctx.fillStyle = white;
+  roundRect(ctx, stubX, goalTop - 6, stubLen, 12, 6);
+  ctx.fill();
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Rounded cap on top of the front post
+  ctx.fillStyle = white;
   ctx.beginPath();
-  ctx.ellipse(frontTopX - (isLeft?4:-4), FIELD.GROUND_Y + 2, 12, 4, 0, 0, Math.PI * 2);
+  ctx.arc(frontX, goalTop - 4, postW / 2 + 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = dark;
+  ctx.stroke();
+
+  // Post ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(frontX, FIELD.GROUND_Y + 3, 16, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(backX, FIELD.GROUND_Y + 3, 12, 4, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -1181,7 +1373,7 @@ function drawGoalText(ctx, side, celebration) {
   // Subtitle
   ctx.font = 'bold 34px "Bebas Neue", sans-serif';
   ctx.fillStyle = color; // Colored subtitle
-  ctx.fillText(side === 'left' ? 'HARIKA VURUS!' : 'CPU SKORLADI', 0, 110);
+  ctx.fillText(side === 'left' ? 'GREAT SHOT!' : 'CPU SCORED', 0, 110);
 
   ctx.restore();
 }

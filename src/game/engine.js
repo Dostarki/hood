@@ -526,21 +526,18 @@ export class GameEngine {
       this.ball.x += (newest.s.bVX / 10) * (dtMs / 16.67);
       this.ball.y += (newest.s.bVY / 10) * (dtMs / 16.67);
     }
-    // Reconcile the locally-predicted own player (this.ai) toward the host's
-    // authoritative position WITHOUT fighting the local prediction:
-    //  - X uses a wide dead-zone so the natural input/RTT offset never drags
-    //    continuous movement; only real drift (collisions) or teleports correct.
-    //  - Y is only corrected on the ground, so an in-air jump stays crisp and
-    //    reconverges naturally on landing. Big jumps in value = goal reset = snap.
+    // Reconcile the locally-predicted own player (this.ai) with the host.
+    // IMPORTANT: never apply a continuous pull toward the authoritative position —
+    // under network latency the authority always lags the prediction, so a pull
+    // would drag movement / feel like an invisible wall. Instead trust the local
+    // prediction during play and only SNAP on host-side teleports (goal resets)
+    // or extreme drift, which keeps movement free while staying in sync.
     const me = this.ai;
-    const ex = newest.s.aX - me.x;
-    const ax = Math.abs(ex);
-    if (ax > 350) me.x = newest.s.aX;
-    else if (ax > 100) me.x += ex * 0.15;
-    const ey = newest.s.aY - me.y;
-    const ay = Math.abs(ey);
-    if (ay > 350) me.y = newest.s.aY;
-    else if (me.onGround && ay > 30) me.y += ey * 0.25;
+    const prevS = buf.length >= 2 ? buf[buf.length - 2].s : newest.s;
+    const teleX = Math.abs(newest.s.aX - prevS.aX) > 200;
+    const teleY = Math.abs(newest.s.aY - prevS.aY) > 200;
+    if (teleX || Math.abs(me.x - newest.s.aX) > 550) me.x = newest.s.aX;
+    if (teleY || Math.abs(me.y - newest.s.aY) > 550) me.y = newest.s.aY;
   }
 
   _playersCollide() {

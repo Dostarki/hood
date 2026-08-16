@@ -1,5 +1,12 @@
 # KICKHOOD — Product Requirements
 
+## Ranked Stakes + Hard AI (2026-06)
+- **AI zorluğu sabit HARD**: `engine.js._updateAI()` yeniden yazıldı (hızlı reactSpeed ~PLAYER_SPEED*1.12, top tahmini, topun gol tarafına geçme, güvenilir şut/kafa/aşırtma). Menüde zorluk seçimi yok.
+- **Ranked Play stake seçimi**: RANKED PLAY → yeni `RankedStake.js` ekranı. **Cüzdan bağlı olması ZORUNLU** (wagmi `useAccount`); bağlı değilse `ranked-connect-prompt` + inline ConnectButton gösterilir.
+- Bağlıyken $1/$10/$50/$100 butonları; her butonun altında **canlı ETH karşılığı** (CoinGecko `simple/price` ETH/USD, 60sn'de bir yenilenir, CORS `*`, key gerekmez). Transfer YOK, sadece seçim.
+- **Stake bazlı eşleşme**: `server.js` artık her stake için ayrı FIFO kuyruk (`waitingByStake`). Sadece aynı stake'i seçenler eşleşir; eşleşmeyen sırada bekler. `net.findMatch(name, teamId, stake)`, `match_start` mesajına `stake` eklendi.
+- Doğrulama: backend WebSocket testi (iki $100 eşleşti, $50 sırada kaldı) + testing agent iteration_4 %100 (stake ekranı cüzdan kapısı, Back, HARD AI maç smoke). Not: bağlı-cüzdan stake butonları + ETH gösterimi otomasyon ortamında cüzdan olmadığı için test edilemedi; kod ve CoinGecko uç noktası doğrulandı.
+
 ## Rebrand & Localization (2026-06)
 - Proje adı **KickHood** olarak değiştirildi (başlık: KICK + neon yeşil HOOD, sekme başlığı `<title>KickHood`)
 - Tüm arayüz **İngilizceye** çevrildi (MainMenu, ProfileScreen, BootScreen/Shop, Matchmaking, HUD, EndScreen, PauseOverlay, StatsCard, MobileControls, canvas metinleri: GOAL!!!/GREAT SHOT!/CPU SCORED, takım & krampon isimleri, server default name PLAYER)

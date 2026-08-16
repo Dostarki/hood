@@ -1,0 +1,19 @@
+{
+  "summary": "Frontend-only verification of KickHood ranked stake gating + HARD AI smoke test. All 5 requested checks passed: RANKED PLAY navigates to stake screen with correct heading and RANKED PLAY tag; wallet-disconnected state correctly shows ranked-connect-prompt with Connect Wallet button and NO stake buttons; Back button returns to main menu; AI-PLAY starts a match with canvas + HUD (timer, score-left, score-right) rendering and running for 7+ seconds without crash; no real console errors (only benign async-storage/Lit/HMR warnings).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Ranked stake gating verified in wallet-disconnected state (only state testable without wallet extension). AI match HARD path runs without errors. Stake buttons + CoinGecko ETH values cannot be tested in this environment (no wallet).",
+  "rca_of_the_issue": "N/A - all tests passed"
+}

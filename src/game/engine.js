@@ -372,43 +372,44 @@ export class GameEngine {
     const ball = this.ball;
     ai.vx = 0;
 
-    // difficulty tuning
-    const reactSpeed = PLAYER_SPEED * 0.9;
-    const goalDefendX = FIELD.W - 320;
+    // HARD difficulty (fixed): fast, predictive and aggressive.
+    const reactSpeed = PLAYER_SPEED * 1.12;
+    const goalDefendX = FIELD.W - 300;
+    const half = FIELD.W / 2;
 
-    // Predict ball x
-    const dx = ball.x - (ai.x + ai.w / 2);
+    const aiCenter = ai.x + ai.w / 2;
+    const dx = ball.x - aiCenter;
     const dy = ball.y - (ai.y + ai.h / 2);
 
-    // If ball is on AI half or coming: pursue
-    if (ball.x > FIELD.W / 2 - 200 || ball.vx > 3) {
-      if (Math.abs(dx) > 20) {
-        ai.vx = Math.sign(dx) * reactSpeed;
-        ai.facing = Math.sign(dx) || ai.facing;
+    // Simple horizontal prediction of the ball.
+    const predictX = ball.x + ball.vx * 8;
+    const ballOnAiSide = ball.x > half - 260 || ball.vx > 2.5;
+
+    if (ballOnAiSide) {
+      // Get to the goal side (right) of the ball so it can drive it toward the left goal.
+      const behindTarget = ball.x + 45;
+      const target = ball.vx < -4 ? predictX + 45 : behindTarget;
+      if (Math.abs(target - aiCenter) > 12) {
+        ai.vx = Math.sign(target - aiCenter) * reactSpeed;
       }
-      // Position slightly behind ball to shoot toward left goal
-      if (ball.x < ai.x + ai.w / 2 && Math.abs(dx) < 90 && ai.onGround) {
-        // aim: get behind the ball, then push left
-        if (ball.x > ai.x - 10) ai.vx = -reactSpeed;
-      }
+      ai.facing = -1; // always aim toward opponent goal when engaged
     } else {
-      // Return to defensive spot
-      const target = goalDefendX;
-      if (Math.abs(ai.x - target) > 15) {
-        ai.vx = Math.sign(target - ai.x) * reactSpeed * 0.7;
+      // Hold a high, ready defensive line.
+      if (Math.abs(ai.x - goalDefendX) > 12) {
+        ai.vx = Math.sign(goalDefendX - ai.x) * reactSpeed * 0.85;
       }
+      ai.facing = -1;
     }
 
-    // Jump for high ball
-    if (dy < -80 && dy > -260 && Math.abs(dx) < 110 && ai.onGround) {
+    // Jump to head high balls with good timing.
+    if (dy < -60 && dy > -300 && Math.abs(dx) < 130 && ai.onGround) {
       ai.jump();
     }
 
-    // Kick when near
-    if (Math.abs(dx) < 110 && Math.abs(dy) < 140) {
-      if (ai.kickCooldown <= 0) {
-        ai.tryKick();
-      }
+    // Strike reliably when in range; chip when the ball is close in front.
+    if (Math.abs(dx) < 130 && Math.abs(dy) < 160 && ai.kickCooldown <= 0) {
+      const useLob = ball.x < aiCenter && Math.abs(dx) < 70 && ball.y < ai.y + ai.h - 30;
+      ai.tryKick(useLob ? 'lob' : 'shot');
     }
   }
 

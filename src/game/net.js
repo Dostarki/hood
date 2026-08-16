@@ -73,8 +73,8 @@ export class NetClient {
     }
   }
 
-  findMatch(name, teamId) {
-    this.send({ type: 'find_match', name, teamId });
+  findMatch(name, teamId, stake) {
+    this.send({ type: 'find_match', name, teamId, stake });
   }
 
   cancel() {

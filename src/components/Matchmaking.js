@@ -5,7 +5,7 @@ import { TEAMS, getTeamById } from '@/game/teams';
 import { audio } from '@/game/audio';
 
 // Matchmaking screen: connects to WS, sends find_match, waits for match_start.
-export default function Matchmaking({ playerTeam, playerName, onCancel, onMatched }) {
+export default function Matchmaking({ playerTeam, playerName, stake, onCancel, onMatched }) {
   const [status, setStatus] = useState('connecting'); // connecting | searching | error
   const [error, setError] = useState('');
   const [elapsed, setElapsed] = useState(0);
@@ -19,7 +19,7 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
         await net.connect();
         if (cancelled) return;
         setStatus('searching');
-        net.findMatch(playerName || playerTeam.name, playerTeam.id);
+        net.findMatch(playerName || playerTeam.name, playerTeam.id, stake);
       } catch (e) {
         setStatus('error');
         setError('Could not connect. Check your connection.');
@@ -55,7 +55,7 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
       clearInterval(timer);
       unsubs.forEach((u) => u());
     };
-  }, [playerTeam, playerName, onMatched]);
+  }, [playerTeam, playerName, stake, onMatched]);
 
   const handleCancel = () => {
     audio.menuBack();
@@ -82,6 +82,13 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
         >
           FINDING <span style={{ color: '#00FF66' }}>OPPONENT</span>
         </h2>
+
+        {stake ? (
+          <div className="mt-3 inline-flex items-center gap-2 border border-white/15 bg-black/50 px-4 py-2" data-testid="matchmaking-stake">
+            <span className="font-heading text-white/50 tracking-[0.3em] text-xs">STAKE</span>
+            <span className="font-heading text-2xl leading-none" style={{ color: '#F4E04D' }}>${stake}</span>
+          </div>
+        ) : null}
 
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-6 border border-white/10 bg-black/60 backdrop-blur-md p-6">
           <div className="flex flex-col items-center gap-2 flex-1">
@@ -131,7 +138,7 @@ export default function Matchmaking({ playerTeam, playerName, onCancel, onMatche
         </div>
 
         <div className="mt-8 text-white/50 text-sm font-body leading-relaxed max-w-lg">
-          Wait until another player hits &quot;RANKED PLAY&quot;. When two players search at the same time, you are matched automatically.
+          You are only matched with players who chose the same ${stake} stake. When two equal-stake players search at the same time, you are matched automatically.
         </div>
       </div>
     </div>

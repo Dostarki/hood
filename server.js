@@ -58,11 +58,12 @@ app.prepare().then(async () => {
 
   // Matchmaking logic
   class Player {
-    constructor(ws, name, teamId) {
+    constructor(ws, name, teamId, stake) {
       this.id = uuidv4();
       this.ws = ws;
       this.name = (name || "PLAYER").substring(0, 20);
       this.teamId = teamId || "neon";
+      this.stake = Number(stake) || 0;
       this.roomId = null;
       this.role = null;
       this.opponentId = null;
@@ -76,22 +77,37 @@ app.prepare().then(async () => {
 
   class MatchmakingManager {
     constructor() {
-      this.waiting = [];
+      // Separate FIFO waiting queues per stake tier so only equal stakes match.
+      this.waitingByStake = {};
       this.players = {};
       this.rooms = {};
     }
 
-    register(ws, name, teamId) {
-      const p = new Player(ws, name, teamId);
+    _queue(stake) {
+      const key = String(stake || 0);
+      if (!this.waitingByStake[key]) this.waitingByStake[key] = [];
+      return this.waitingByStake[key];
+    }
+
+    _removeFromQueues(playerId) {
+      for (const key of Object.keys(this.waitingByStake)) {
+        this.waitingByStake[key] = this.waitingByStake[key].filter(w => w.id !== playerId);
+      }
+    }
+
+    register(ws, name, teamId, stake) {
+      const p = new Player(ws, name, teamId, stake);
       this.players[p.id] = p;
       return p;
     }
 
     findMatch(player) {
-      this.waiting = this.waiting.filter(w => w.id !== player.id);
+      // Ensure the player is not queued anywhere, then look only within the same stake tier.
+      this._removeFromQueues(player.id);
+      const queue = this._queue(player.stake);
       let opponent = null;
-      while (this.waiting.length > 0) {
-        const candidate = this.waiting.shift();
+      while (queue.length > 0) {
+        const candidate = queue.shift();
         if (this.players[candidate.id] && candidate.ws.readyState === 1) {
           opponent = candidate;
           break;
@@ -99,7 +115,7 @@ app.prepare().then(async () => {
       }
 
       if (!opponent) {
-        this.waiting.push(player);
+        queue.push(player);
         player.send({ type: "searching" });
         return;
       }
@@ -117,19 +133,21 @@ app.prepare().then(async () => {
         type: "match_start",
         role: "host",
         roomId: roomId,
+        stake: player.stake,
         opponent: { name: player.name, teamId: player.teamId }
       });
       player.send({
         type: "match_start",
         role: "guest",
         roomId: roomId,
+        stake: player.stake,
         opponent: { name: opponent.name, teamId: opponent.teamId }
       });
-      console.log(`Match created: ${opponent.name} vs ${player.name}`);
+      console.log(`Match created ($${player.stake}): ${opponent.name} vs ${player.name}`);
     }
 
     cancel(player) {
-      this.waiting = this.waiting.filter(w => w.id !== player.id);
+      this._removeFromQueues(player.id);
     }
 
     relay(player, msg) {
@@ -142,7 +160,7 @@ app.prepare().then(async () => {
     }
 
     leave(player) {
-      this.waiting = this.waiting.filter(w => w.id !== player.id);
+      this._removeFromQueues(player.id);
       if (player.roomId) {
         const opp = this.players[player.opponentId];
         if (opp) {
@@ -172,10 +190,11 @@ app.prepare().then(async () => {
 
         if (mtype === "find_match") {
           if (!player) {
-            player = manager.register(ws, msg.name, msg.teamId);
+            player = manager.register(ws, msg.name, msg.teamId, msg.stake);
           } else {
             player.name = (msg.name || player.name).substring(0, 20);
             player.teamId = msg.teamId || player.teamId;
+            player.stake = Number(msg.stake) || 0;
           }
           manager.findMatch(player);
         } else if (mtype === "cancel") {

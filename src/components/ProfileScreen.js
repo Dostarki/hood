@@ -71,18 +71,18 @@ export default function ProfileScreen({ initialPlayerId, onBack, onSave }) {
           className="flex items-center gap-2 text-white/60 hover:text-white transition-colors font-heading tracking-widest text-sm mb-8"
           onClick={() => { audio.menuBack(); onBack(); }}
         >
-          <ArrowLeft size={16} strokeWidth={2.5} /> GERİ
+          <ArrowLeft size={16} strokeWidth={2.5} /> BACK
         </button>
 
         <div className="flex items-center gap-3 mb-4">
           <div className="h-3 w-3 bg-[#00FF66]" />
-          <div className="font-heading text-sm tracking-[0.4em] text-white/70">PROFİL</div>
+          <div className="font-heading text-sm tracking-[0.4em] text-white/70">PROFILE</div>
         </div>
         <h2
           className="font-heading uppercase text-white leading-none tracking-tighter"
           style={{ fontSize: 'clamp(2.5rem, 8vw, 5.5rem)' }}
         >
-          KARAKTERİNİ <span style={{ color: player.primary }}>SEÇ</span>
+          CHOOSE YOUR <span style={{ color: player.primary }}>CHARACTER</span>
         </h2>
 
         {/* Selection preview */}
@@ -112,7 +112,7 @@ export default function ProfileScreen({ initialPlayerId, onBack, onSave }) {
 
         {/* Grid of all teams as quick-pick */}
         <div className="mt-12 max-w-4xl mx-auto">
-          <div className="font-heading text-white/50 tracking-[0.3em] text-xs mb-3 text-center">HIZLI SEÇİM</div>
+          <div className="font-heading text-white/50 tracking-[0.3em] text-xs mb-3 text-center">QUICK SELECT</div>
           <div className="flex flex-wrap justify-center gap-4">
             {TEAMS.map((t) => {
               const Icon = t.icon;
@@ -145,7 +145,7 @@ export default function ProfileScreen({ initialPlayerId, onBack, onSave }) {
             className="btn-brutal flex items-center gap-3"
             onClick={handleSave}
           >
-            KAYDET
+            SAVE
           </button>
         </div>
       </div>

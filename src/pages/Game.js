@@ -188,7 +188,7 @@ export default function Game() {
     setFinalScore({ scoreL: 0, scoreR: 0 });
     setMatchRecords(null);
     setGameMode(role);
-    setOnlineInfo({ opponentName: opponent?.name || 'Rakip', role, leftTeam, rightTeam });
+    setOnlineInfo({ opponentName: opponent?.name || 'Opponent', role, leftTeam, rightTeam });
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [playerTeam, bootId]);

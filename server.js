@@ -61,7 +61,7 @@ app.prepare().then(async () => {
     constructor(ws, name, teamId) {
       this.id = uuidv4();
       this.ws = ws;
-      this.name = (name || "OYUNCU").substring(0, 20);
+      this.name = (name || "PLAYER").substring(0, 20);
       this.teamId = teamId || "neon";
       this.roomId = null;
       this.role = null;

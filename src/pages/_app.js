@@ -1,6 +1,7 @@
 import '@/styles/globals.css';
 import '@/styles/App.css';
 import '@rainbow-me/rainbowkit/styles.css';
+import Head from 'next/head';
 import { useState } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,6 +24,9 @@ export default function App({ Component, pageProps }) {
             fontStack: 'system',
           })}
         >
+          <Head>
+            <title>KickHood</title>
+          </Head>
           <WalletButton />
           <Component {...pageProps} />
           <Toaster />

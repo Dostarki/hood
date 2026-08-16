@@ -141,8 +141,8 @@ function drawGraffiti(ctx) {
   };
 
   tag(380, 235, 'STREET', 96, '#8E7CC3', '#4A3B77', -0.05);
-  tag(820, 300, 'KRAL', 110, '#4CAF50', '#2E5E32', 0.06);
-  tag(1230, 240, 'GOL!', 88, '#D96C6C', '#7E3030', -0.08);
+  tag(820, 300, 'KING', 110, '#4CAF50', '#2E5E32', 0.06);
+  tag(1230, 240, 'GOAL!', 88, '#D96C6C', '#7E3030', -0.08);
   tag(180, 340, '\u2605', 70, '#E9C46A', null, 0.2);
   tag(1450, 330, '99', 76, '#5BC0BE', '#2F6B6A', 0.1);
 
@@ -1373,7 +1373,7 @@ function drawGoalText(ctx, side, celebration) {
   // Subtitle
   ctx.font = 'bold 34px "Bebas Neue", sans-serif';
   ctx.fillStyle = color; // Colored subtitle
-  ctx.fillText(side === 'left' ? 'HARIKA VURUS!' : 'CPU SKORLADI', 0, 110);
+  ctx.fillText(side === 'left' ? 'GREAT SHOT!' : 'CPU SCORED', 0, 110);
 
   ctx.restore();
 }

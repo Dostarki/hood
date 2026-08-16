@@ -1,4 +1,10 @@
-# NEON PITCH STRIKER — Product Requirements
+# KICKHOOD — Product Requirements
+
+## Rebrand & Localization (2026-06)
+- Proje adı **KickHood** olarak değiştirildi (başlık: KICK + neon yeşil HOOD, sekme başlığı `<title>KickHood`)
+- Tüm arayüz **İngilizceye** çevrildi (MainMenu, ProfileScreen, BootScreen/Shop, Matchmaking, HUD, EndScreen, PauseOverlay, StatsCard, MobileControls, canvas metinleri: GOAL!!!/GREAT SHOT!/CPU SCORED, takım & krampon isimleri, server default name PLAYER)
+- Ana menü değişiklikleri: **Ayarlar (Settings) kaldırıldı**; "Oyna"→**AI-PLAY**, "Krampon"→**SHOP** (ShoppingBag ikonu), "Maç Bul"→**RANKED PLAY**, "Profil"→PROFILE, "Ses"→SOUND ON/OFF
+- Not: parallel same-file search_replace race yaşandı → aynı dosyaya eş zamanlı düzenleme yerine sıralı yapılmalı
 
 ## Original Problem Statement
 Web tarayıcısında çalışan 2D futbol oyunu geliştir. Hızlı arcade futbol mantığında, tek oyuncu bilgisayara karşı. HTML5 Canvas + React. Klavye (WASD/oklar/space) ve mobil dokunmatik butonlar. Skor, süre (90sn), gol animasyonu, ses efektleri. Yan görünüş (side-view), modern minimalist stil, stilize futbolcu figürleri, programatik ses efektleri (Web Audio API), responsive mobil destekli.

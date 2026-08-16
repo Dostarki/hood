@@ -5,7 +5,7 @@ import { robinhoodChain } from '@/lib/chain';
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 export const wagmiConfig = getDefaultConfig({
-  appName: 'Neon Pitch Striker',
+  appName: 'KickHood',
   projectId,
   chains: [robinhoodChain],
   transports: {

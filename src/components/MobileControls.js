@@ -91,7 +91,7 @@ export default function MobileControls({ engineRef }) {
         </button>
       </div>
 
-      {/* Action cluster: jump + shoot (flat) + lob (aşırtma) */}
+      {/* Action cluster: jump + shoot (flat) + lob (chip) */}
       <div className="flex gap-3 pointer-events-auto">
         <button
           type="button"
@@ -104,7 +104,7 @@ export default function MobileControls({ engineRef }) {
         <button
           type="button"
           data-testid="mobile-btn-shoot"
-          aria-label="Şut"
+          aria-label="Shot"
           className={`ctrl-btn hb action ${pressed.shoot ? 'pressed' : ''}`}
           {...handlers('shoot')}
         >
@@ -113,7 +113,7 @@ export default function MobileControls({ engineRef }) {
         <button
           type="button"
           data-testid="mobile-btn-lob"
-          aria-label="Aşırtma"
+          aria-label="Lob"
           className={`ctrl-btn hb action ${pressed.lob ? 'pressed' : ''}`}
           {...handlers('lob')}
         >

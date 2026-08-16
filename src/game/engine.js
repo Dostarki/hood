@@ -269,6 +269,7 @@ export class GameEngine {
     this.stateTickCount = 0;
     this.snapBuffer = [];      // guest: timed snapshot buffer for interpolation
     this.interpDelay = 110;    // ms render delay behind newest snapshot
+    this.ballLocalUntil = 0;   // guest: ms timestamp until which the ball is locally controlled after own contact
     this.ball = new Ball();
     this.scoreL = 0;
     this.scoreR = 0;
@@ -300,10 +301,21 @@ export class GameEngine {
     if (this.ended || this.paused) return;
 
     // Guest mode: locally PREDICT own player for instant response, interpolate
-    // the host player + ball from snapshots, then reconcile own player to authority.
+    // the host player from snapshots. The ball stays host-authoritative BUT we
+    // run a local contact check against our own predicted player so it never
+    // phases through — on contact the ball gets brief local control so it reacts
+    // instantly, then hands authority back to the host's snapshots.
     if (this.mode === 'guest') {
+      const now = performance.now();
       this._stepGuestLocalPlayer();
-      this._interpolateGuest(performance.now());
+      const ballLocal = now < this.ballLocalUntil;
+      this._interpolateGuest(now, ballLocal);
+      if (ballLocal) this.ball.update();
+      const hit = collideBallPlayer(this.ball, this.ai);
+      if (hit) {
+        this._spawnHit(hit);
+        this.ballLocalUntil = now + 200; // brief local ball authority after contact
+      }
       this._updateParticles();
       if (this.shake > 0) this.shake *= 0.9;
       if (this.celebration > 0) this.celebration--;
@@ -496,7 +508,7 @@ export class GameEngine {
     }
   }
 
-  _interpolateGuest(now) {
+  _interpolateGuest(now, skipBall = false) {
     const buf = this.snapBuffer;
     if (buf.length === 0) return;
     const renderT = now - this.interpDelay;
@@ -516,15 +528,19 @@ export class GameEngine {
     this.player.x = L(s1.pX, s2.pX); this.player.y = L(s1.pY, s2.pY);
     this.player.facing = s2.pF; this.player.kicking = s2.pK;
     this.player.legPhase = L(s1.pL, s2.pL) / 100;
-    this.ball.x = L(s1.bX, s2.bX); this.ball.y = L(s1.bY, s2.bY);
-    this.ball.vx = s2.bVX / 10; this.ball.vy = s2.bVY / 10;
-    this.ball.spin = L(s1.bS, s2.bS) / 100;
-    // Buffer starved (packet gap): extrapolate the ball briefly using last velocity
     const newest = buf[buf.length - 1];
-    if (renderT > newest.t) {
-      const dtMs = Math.min(200, renderT - newest.t);
-      this.ball.x += (newest.s.bVX / 10) * (dtMs / 16.67);
-      this.ball.y += (newest.s.bVY / 10) * (dtMs / 16.67);
+    // Ball is host-authoritative via interpolation, UNLESS it is briefly under
+    // local control after our own player made contact (skipBall).
+    if (!skipBall) {
+      this.ball.x = L(s1.bX, s2.bX); this.ball.y = L(s1.bY, s2.bY);
+      this.ball.vx = s2.bVX / 10; this.ball.vy = s2.bVY / 10;
+      this.ball.spin = L(s1.bS, s2.bS) / 100;
+      // Buffer starved (packet gap): extrapolate the ball briefly using last velocity
+      if (renderT > newest.t) {
+        const dtMs = Math.min(200, renderT - newest.t);
+        this.ball.x += (newest.s.bVX / 10) * (dtMs / 16.67);
+        this.ball.y += (newest.s.bVY / 10) * (dtMs / 16.67);
+      }
     }
     // Reconcile the locally-predicted own player (this.ai) with the host.
     // IMPORTANT: never apply a continuous pull toward the authoritative position —

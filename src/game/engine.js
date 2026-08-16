@@ -15,7 +15,7 @@ export const FIELD = {
 
 const GRAVITY = 0.75;
 const PLAYER_SPEED = 5.5;
-const JUMP_V = -16;
+const JUMP_V = -18.5;
 const BALL_BOUNCE = 0.72;
 const BALL_AIR_FRICTION = 0.9975;
 const BALL_GROUND_FRICTION = 0.985;
@@ -30,13 +30,13 @@ function len(x, y) { return Math.hypot(x, y); }
 class Player {
   constructor({ x, side, color, name, controlled, theme, bootId }) {
     this.x = x;
-    this.y = FIELD.GROUND_Y - 130;
+    this.y = FIELD.GROUND_Y - 100;
     this.vx = 0;
     this.vy = 0;
-    this.w = 90;
-    this.h = 130;
-    this.headR = 55;
-    this.bodyTop = 85; // relative offset where torso starts (below head)
+    this.w = 70;
+    this.h = 100;
+    this.headR = 42;
+    this.bodyTop = 66; // relative offset where torso starts (below head)
     this.onGround = true;
     this.side = side;          // 'left' | 'right'
     this.color = color;

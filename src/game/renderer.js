@@ -555,7 +555,7 @@ function drawPlayer(ctx, p) {
   // Ground shadow
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.beginPath();
-  ctx.ellipse(cx, FIELD.GROUND_Y + 2, 50, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, FIELD.GROUND_Y + 2, 38, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   const kickPhase = p.kicking > 0 ? (14 - p.kicking) / 14 : 0;

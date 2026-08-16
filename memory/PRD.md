@@ -1,5 +1,12 @@
 # KICKHOOD — Product Requirements
 
+## Guest Client-Side Prediction (2026-06)
+- **Guest input gecikmesi fix**: Guest artık "dumb terminal" değil. Kendi oyuncusunu (`this.ai`, sağ taraf) yerel input ile ANINDA simüle ediyor (`_stepGuestLocalPlayer` → engine `step()` guest dalında interpolasyondan önce çağrılır). Zıplama/hareket round-trip beklemeden anlık.
+- **Reconciliation**: `_interpolateGuest` sonunda host'un otoritatif pozisyonuna yumuşak düzeltme. X: geniş dead-zone (>100px 0.15, >350px snap) → doğal RTT offseti hareketi sürüklemez. Y: sadece yerdeyken düzeltilir (havadayken zıplama bozulmaz), >350px snap (gol reset). Host player + top hâlâ interpolasyonla (110ms) render edilir.
+- ⚠️ Frontend değişikliği → `cd /app && yarn build && sudo supervisorctl restart frontend` zorunlu (production mode).
+- Test durumu: Kod build OK, AI/host yolu değişmedi (regresyon yok). Gerçek 2-oyunculu ranked maç testi cüzdan-bağlantı gateway + iki eşzamanlı client gerektirdiğinden KULLANICI DOĞRULAMASI BEKLENİYOR.
+
+
 ## Online Stabilite & Production Mode (2026-06)
 - **Guest kasma fix**: `engine.js` guest tarafına snapshot interpolation eklendi (`snapBuffer` + `_interpolateGuest`, 110ms render gecikmesi, ışınlanma >300px'te snap, paket boşluğunda top ekstrapolasyonu). Host state gönderimi 20Hz→30Hz, guest input 25Hz→30Hz (`Game.js`).
 - **Kopma fix**: WS keepalive (client 10sn JSON ping `net.js`, server 30sn ws.ping heartbeat) + **maç içi otomatik yeniden bağlanma**: `match_start` artık `token` içerir; soket düşerse client 1.2sn arayla max 10 deneme resume yapar; server 15sn grace period tutar (`handleDisconnect`/`resume`/sweep). Eventler: `opponent_reconnecting/opponent_reconnected/resumed/resume_failed`. Oyunda sarı "RECONNECTING…" banner (`reconnect-banner`) + engine pause; resume başarısızsa maç `opponent_left` gibi biter. Online maçta `beforeunload` uyarısı.

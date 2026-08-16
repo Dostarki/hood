@@ -299,8 +299,10 @@ export class GameEngine {
   step(dt) {
     if (this.ended || this.paused) return;
 
-    // Guest mode: skip simulation, interpolate remote snapshots + visual effects
+    // Guest mode: locally PREDICT own player for instant response, interpolate
+    // the host player + ball from snapshots, then reconcile own player to authority.
     if (this.mode === 'guest') {
+      this._stepGuestLocalPlayer();
       this._interpolateGuest(performance.now());
       this._updateParticles();
       if (this.shake > 0) this.shake *= 0.9;
@@ -445,6 +447,21 @@ export class GameEngine {
     Object.assign(this.remoteInput, input);
   }
 
+  // Guest-side client prediction: the guest owns the RIGHT player (this.ai).
+  // Simulate it locally from local input so movement/jump react instantly,
+  // instead of waiting a full network round-trip through the host.
+  _stepGuestLocalPlayer() {
+    const me = this.ai;
+    if (this.frozen > 0) { me.vx = 0; me.update(); return; }
+    if (this.input.left && !this.input.right) me.moveLeft();
+    else if (this.input.right && !this.input.left) me.moveRight();
+    else me.stop();
+    if (this.input.jump) me.jump();
+    if (this.input.lob) me.tryKick('lob');
+    else if (this.input.shoot) me.tryKick('shot');
+    me.update();
+  }
+
   snapshotState() {
     return {
       pX: Math.round(this.player.x), pY: Math.round(this.player.y),
@@ -499,9 +516,6 @@ export class GameEngine {
     this.player.x = L(s1.pX, s2.pX); this.player.y = L(s1.pY, s2.pY);
     this.player.facing = s2.pF; this.player.kicking = s2.pK;
     this.player.legPhase = L(s1.pL, s2.pL) / 100;
-    this.ai.x = L(s1.aX, s2.aX); this.ai.y = L(s1.aY, s2.aY);
-    this.ai.facing = s2.aF; this.ai.kicking = s2.aK;
-    this.ai.legPhase = L(s1.aL, s2.aL) / 100;
     this.ball.x = L(s1.bX, s2.bX); this.ball.y = L(s1.bY, s2.bY);
     this.ball.vx = s2.bVX / 10; this.ball.vy = s2.bVY / 10;
     this.ball.spin = L(s1.bS, s2.bS) / 100;
@@ -512,6 +526,21 @@ export class GameEngine {
       this.ball.x += (newest.s.bVX / 10) * (dtMs / 16.67);
       this.ball.y += (newest.s.bVY / 10) * (dtMs / 16.67);
     }
+    // Reconcile the locally-predicted own player (this.ai) toward the host's
+    // authoritative position WITHOUT fighting the local prediction:
+    //  - X uses a wide dead-zone so the natural input/RTT offset never drags
+    //    continuous movement; only real drift (collisions) or teleports correct.
+    //  - Y is only corrected on the ground, so an in-air jump stays crisp and
+    //    reconverges naturally on landing. Big jumps in value = goal reset = snap.
+    const me = this.ai;
+    const ex = newest.s.aX - me.x;
+    const ax = Math.abs(ex);
+    if (ax > 350) me.x = newest.s.aX;
+    else if (ax > 100) me.x += ex * 0.15;
+    const ey = newest.s.aY - me.y;
+    const ay = Math.abs(ey);
+    if (ay > 350) me.y = newest.s.aY;
+    else if (me.onGround && ay > 30) me.y += ey * 0.25;
   }
 
   _playersCollide() {

@@ -1,10 +1,15 @@
 // Frontend WebSocket client for online matchmaking + realtime relay.
+// Supports keepalive pings and automatic mid-match reconnection (resume).
 
 function wsUrl() {
   // Convert https -> wss, http -> ws
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${window.location.host}/api/ws`;
 }
+
+const PING_INTERVAL = 10000;
+const RECONNECT_DELAY = 1200;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 export class NetClient {
   constructor() {
@@ -13,6 +18,11 @@ export class NetClient {
     this._connected = false;
     this._closed = false;
     this._connectPromise = null;
+    this.sessionToken = null;
+    this.inMatch = false;
+    this._pingTimer = null;
+    this._reconnectTimer = null;
+    this._reconnectAttempts = 0;
   }
 
   on(type, cb) {
@@ -44,6 +54,7 @@ export class NetClient {
       this.ws.onopen = () => {
         this._connected = true;
         settled = true;
+        this._startPing();
         resolve();
         this.emit('open');
       };
@@ -53,11 +64,17 @@ export class NetClient {
       };
       this.ws.onclose = () => {
         this._connected = false;
+        this._stopPing();
         this.emit('close');
+        // Auto-reconnect mid-match on unexpected socket drops
+        if (!this._closed && this.inMatch && this.sessionToken) {
+          this._scheduleReconnect();
+        }
       };
       this.ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
+          this._track(msg);
           this.emit(msg.type, msg);
         } catch (err) {
           console.warn('WS parse error', err);
@@ -65,6 +82,43 @@ export class NetClient {
       };
     });
     return this._connectPromise;
+  }
+
+  _track(msg) {
+    if (msg.type === 'match_start' || msg.type === 'resumed') {
+      if (msg.token) this.sessionToken = msg.token;
+      this.inMatch = true;
+      this._reconnectAttempts = 0;
+    } else if (msg.type === 'opponent_left' || msg.type === 'resume_failed') {
+      this.inMatch = false;
+      this.sessionToken = null;
+    }
+  }
+
+  _startPing() {
+    this._stopPing();
+    this._pingTimer = setInterval(() => this.send({ type: 'ping' }), PING_INTERVAL);
+  }
+
+  _stopPing() {
+    if (this._pingTimer) { clearInterval(this._pingTimer); this._pingTimer = null; }
+  }
+
+  _scheduleReconnect() {
+    this._reconnectAttempts++;
+    if (this._reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+      this.inMatch = false;
+      this.sessionToken = null;
+      this.emit('resume_failed', {});
+      return;
+    }
+    this.emit('reconnecting', { attempt: this._reconnectAttempts });
+    this._reconnectTimer = setTimeout(() => {
+      if (this._closed || !this.inMatch) return;
+      this.connect()
+        .then(() => this.send({ type: 'resume', token: this.sessionToken }))
+        .catch(() => this._scheduleReconnect());
+    }, RECONNECT_DELAY);
   }
 
   send(msg) {
@@ -98,11 +152,17 @@ export class NetClient {
   }
 
   leave() {
+    this.inMatch = false;
+    this.sessionToken = null;
     this.send({ type: 'leave' });
   }
 
   close() {
     this._closed = true;
+    this.inMatch = false;
+    this.sessionToken = null;
+    this._stopPing();
+    if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
     if (this.ws) this.ws.close();
     this.ws = null;
     this._connected = false;

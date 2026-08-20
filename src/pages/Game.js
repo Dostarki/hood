@@ -42,6 +42,7 @@ export default function Game() {
   const [matchRecords, setMatchRecords] = useState(null);
   const [gameMode, setGameMode] = useState('ai'); // 'ai' | 'host' | 'guest'
   const [onlineInfo, setOnlineInfo] = useState(null); // { opponentName, opponentLeft }
+  const [connMsg, setConnMsg] = useState(null); // reconnecting banner text
   const [rankedStake, setRankedStake] = useState(10); // selected ranked stake in USD
   const engineRef = useRef(null);
   const isMobile = useIsMobile();
@@ -69,6 +70,14 @@ export default function Game() {
     return () => window.removeEventListener('keydown', handler);
   }, [state, gameMode]);
 
+  // Warn before accidental refresh/close during an online match
+  useEffect(() => {
+    if (gameMode === 'ai' || state !== STATE.PLAYING) return;
+    const h = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+  }, [gameMode, state]);
+
   // --- Online sync effects ---
   useEffect(() => {
     if (gameMode === 'ai' || state !== STATE.PLAYING) return;
@@ -79,14 +88,14 @@ export default function Game() {
       if (gameMode === 'host') {
         net.sendState(engineRef.current.snapshotState());
       }
-    }, 50); // 20Hz
+    }, 33); // ~30Hz
 
     const inputInterval = setInterval(() => {
       if (!running || !engineRef.current) return;
       if (gameMode === 'guest') {
         net.sendInput(engineRef.current.input);
       }
-    }, 40); // 25Hz
+    }, 33); // ~30Hz
 
     const unsubs = [];
     unsubs.push(net.on('opponent_input', (msg) => {
@@ -116,6 +125,18 @@ export default function Game() {
       if (engineRef.current) {
         engineRef.current.ended = true;
       }
+      setFinalScore({ scoreL: engineRef.current?.scoreL || 0, scoreR: engineRef.current?.scoreR || 0 });
+      setState(STATE.ENDED);
+    }));
+    // Connection resilience: pause + banner during reconnect, resume seamlessly
+    unsubs.push(net.on('reconnecting', () => setConnMsg('RECONNECTING…')));
+    unsubs.push(net.on('resumed', () => setConnMsg(null)));
+    unsubs.push(net.on('opponent_reconnecting', () => setConnMsg('OPPONENT RECONNECTING…')));
+    unsubs.push(net.on('opponent_reconnected', () => setConnMsg(null)));
+    unsubs.push(net.on('resume_failed', () => {
+      setConnMsg(null);
+      setOnlineInfo((info) => ({ ...(info || {}), opponentLeft: true }));
+      if (engineRef.current) engineRef.current.ended = true;
       setFinalScore({ scoreL: engineRef.current?.scoreL || 0, scoreR: engineRef.current?.scoreR || 0 });
       setState(STATE.ENDED);
     }));
@@ -162,6 +183,7 @@ export default function Game() {
     setMatchRecords(null);
     setGameMode('ai');
     setOnlineInfo(null);
+    setConnMsg(null);
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [playerTeam.id]);
@@ -194,6 +216,7 @@ export default function Game() {
     setMatchRecords(null);
     setGameMode(role);
     setOnlineInfo({ opponentName: opponent?.name || 'Opponent', role, leftTeam, rightTeam });
+    setConnMsg(null);
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [playerTeam, bootId]);
@@ -241,6 +264,7 @@ export default function Game() {
       try { net.leave(); } catch (_) { /* noop */ }
       setGameMode('ai');
       setOnlineInfo(null);
+      setConnMsg(null);
       setState(STATE.MENU);
       return;
     }
@@ -256,6 +280,7 @@ export default function Game() {
     }
     setGameMode('ai');
     setOnlineInfo(null);
+    setConnMsg(null);
     setState(STATE.MENU);
   }, [gameMode]);
 
@@ -294,7 +319,7 @@ export default function Game() {
               onScore={handleScore}
               onEnd={handleEnd}
               matchDuration={MATCH_DURATION}
-              running={state === STATE.PLAYING}
+              running={state === STATE.PLAYING && !connMsg}
               playerTeam={renderLeftTeam}
               aiTeam={renderRightTeam}
               mode={gameMode}
@@ -310,6 +335,15 @@ export default function Game() {
             }}
           />
           {isMobile && state === STATE.PLAYING && <MobileControls engineRef={engineRef} />}
+          {connMsg && (
+            <div
+              className="absolute top-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 border border-[#F4E04D]/40 bg-black/80 px-4 py-2"
+              data-testid="reconnect-banner"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#F4E04D] animate-pulse" />
+              <span className="font-heading tracking-[0.3em] text-[#F4E04D] text-sm">{connMsg}</span>
+            </div>
+          )}
           {state === STATE.PAUSED && (
             <PauseOverlay
               onResume={() => setState(STATE.PLAYING)}

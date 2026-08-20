@@ -1,0 +1,17 @@
+{
+  "summary": "Full backend WS + frontend regression for KickHood reconnect/interpolation fixes. All 9 requested scenarios PASS. Backend: 2 clients w/ $10 stake matched with host/guest roles + resume tokens; guest->host input relay; dirty guest disconnect triggers opponent_reconnecting; new socket w/ resume token gets 'resumed' payload (role guest + opponent info); host receives opponent_reconnected; post-resume state relay works; bad token -> resume_failed; and grace-period expiry (no resume) fires opponent_left after ~15.9s (within 15-18s spec). Frontend (prod mode, port 3000): /Game main menu loads with 0 console errors and no _hardReload marker; AI-PLAY renders canvas + HUD (score-left, timer, score-right, team-label-left/right, pause-btn) and match runs cleanly; RANKED-PLAY shows ranked-connect-prompt when wallet disconnected; mobile 390x844 shows all 5 controls (left/right/shoot/jump/lob) in a single row at y=775 (bottom).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/tests/ws_resume_test.js",
+    "/app/tests/ws_grace_expiry_test.js"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": ["/app/tests/ws_grace_expiry_test.js"],
+  "success_rate": {"backend": "100% (9/9 WS scenarios)", "frontend": "100% (4/4 UI regressions)"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Production mode is active (node server.js on :3000, NODE_ENV=production, no HMR). Backend WS at ws://localhost:3000/api/ws. Two WS test scripts exist: ws_resume_test.js (match/relay/resume/bad-token, ~4s) and ws_grace_expiry_test.js (~17s wait for opponent_left). Main-menu testid for AI-PLAY is 'play-btn' (not 'menu-ai-play'; that testid also resolves via role fallback). Ranked stake screen requires wallet connection which cannot be automated. Grace period measured at ~15.9s in practice (server sweep interval)."
+}

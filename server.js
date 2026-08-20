@@ -60,6 +60,7 @@ app.prepare().then(async () => {
   class Player {
     constructor(ws, name, teamId, stake) {
       this.id = uuidv4();
+      this.token = uuidv4(); // resume token for mid-match reconnection
       this.ws = ws;
       this.name = (name || "PLAYER").substring(0, 20);
       this.teamId = teamId || "neon";
@@ -67,9 +68,10 @@ app.prepare().then(async () => {
       this.roomId = null;
       this.role = null;
       this.opponentId = null;
+      this.disconnectedAt = null;
     }
     send(msg) {
-      if (this.ws.readyState === 1) { // OPEN
+      if (this.ws && this.ws.readyState === 1) { // OPEN
         this.ws.send(JSON.stringify(msg));
       }
     }
@@ -134,6 +136,7 @@ app.prepare().then(async () => {
         role: "host",
         roomId: roomId,
         stake: player.stake,
+        token: opponent.token,
         opponent: { name: player.name, teamId: player.teamId }
       });
       player.send({
@@ -141,6 +144,7 @@ app.prepare().then(async () => {
         role: "guest",
         roomId: roomId,
         stake: player.stake,
+        token: player.token,
         opponent: { name: opponent.name, teamId: opponent.teamId }
       });
       console.log(`Match created ($${player.stake}): ${opponent.name} vs ${player.name}`);
@@ -157,6 +161,44 @@ app.prepare().then(async () => {
       if (opponent) {
         opponent.send(msg);
       }
+    }
+
+    // Socket dropped: keep the room alive for a grace period so the player can resume.
+    handleDisconnect(player) {
+      if (!player.roomId) {
+        this.leave(player);
+        return;
+      }
+      player.ws = null;
+      player.disconnectedAt = Date.now();
+      const opp = this.players[player.opponentId];
+      if (opp) opp.send({ type: "opponent_reconnecting" });
+      console.log(`Player ${player.name} disconnected mid-match, grace period started`);
+    }
+
+    resume(ws, token) {
+      let found = null;
+      for (const id of Object.keys(this.players)) {
+        if (this.players[id].token === token) { found = this.players[id]; break; }
+      }
+      if (!found || !found.roomId) {
+        if (ws.readyState === 1) ws.send(JSON.stringify({ type: "resume_failed" }));
+        return null;
+      }
+      found.ws = ws;
+      found.disconnectedAt = null;
+      const opp = this.players[found.opponentId];
+      found.send({
+        type: "resumed",
+        role: found.role,
+        roomId: found.roomId,
+        stake: found.stake,
+        token: found.token,
+        opponent: opp ? { name: opp.name, teamId: opp.teamId } : null
+      });
+      if (opp) opp.send({ type: "opponent_reconnected" });
+      console.log(`Player ${found.name} resumed match ${found.roomId}`);
+      return found;
     }
 
     leave(player) {
@@ -180,8 +222,31 @@ app.prepare().then(async () => {
 
   const manager = new MatchmakingManager();
 
+  // Sweep: end matches whose disconnected player never came back within grace.
+  const DISCONNECT_GRACE_MS = 15000;
+  setInterval(() => {
+    for (const id of Object.keys(manager.players)) {
+      const p = manager.players[id];
+      if (p.disconnectedAt && Date.now() - p.disconnectedAt > DISCONNECT_GRACE_MS) {
+        console.log(`Grace expired for ${p.name}, removing`);
+        manager.leave(p);
+      }
+    }
+  }, 3000);
+
+  // WS heartbeat: keep proxies from idling connections out + detect dead sockets.
+  setInterval(() => {
+    wss.clients.forEach((client) => {
+      if (client.isAlive === false) return client.terminate();
+      client.isAlive = false;
+      client.ping();
+    });
+  }, 30000);
+
   wss.on('connection', (ws) => {
     let player = null;
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
 
     ws.on('message', (message) => {
       try {
@@ -214,6 +279,9 @@ app.prepare().then(async () => {
             const relayed = { ...msg, type: typeMap[mtype] };
             manager.relay(player, relayed);
           }
+        } else if (mtype === "resume") {
+          const resumed = manager.resume(ws, msg.token);
+          if (resumed) player = resumed;
         } else if (mtype === "leave") {
           if (player) {
             manager.leave(player);
@@ -228,8 +296,9 @@ app.prepare().then(async () => {
     });
 
     ws.on('close', () => {
-      if (player) {
-        manager.leave(player);
+      // Only act if this socket is still the player's active socket (not replaced by a resume)
+      if (player && player.ws === ws) {
+        manager.handleDisconnect(player);
       }
     });
   });

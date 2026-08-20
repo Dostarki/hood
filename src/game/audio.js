@@ -61,6 +61,14 @@ class AudioManager {
     this._tone(660, 'triangle', 0.06, 0.15);
   }
 
+  // Header: sharp "thock" impact — punchy mid thud + high tick
+  header() {
+    if (!this.ctx || !this.enabled) return;
+    this._tone(300, 'square', 0.07, 0.6, 120);
+    this._tone(1000, 'triangle', 0.05, 0.3, 500);
+    this._tone(140, 'sine', 0.09, 0.35, 70);
+  }
+
   jump() {
     if (!this.ctx || !this.enabled) return;
     this._tone(320, 'triangle', 0.12, 0.35, 720);

@@ -27,7 +27,9 @@ body {
 
 .App {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
+  width: 100dvw;
   position: relative;
   overflow: hidden;
   background: #0A0D0B;
@@ -108,10 +110,37 @@ body {
   border-color: #FF3B30;
 }
 
+/* Mobile control bar: single anchored row, always fits the screen width */
+.mobile-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px clamp(8px, 3vw, 22px);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 40;
+  pointer-events: none;
+}
+.mobile-controls .mc-group {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(8px, 2.5vw, 16px);
+  pointer-events: auto;
+}
+.mc-ico {
+  width: 60%;
+  height: 60%;
+}
+
 /* Mobile control button */
 .ctrl-btn {
-  width: 78px;
-  height: 78px;
+  width: clamp(52px, 15vw, 74px);
+  height: clamp(52px, 15vw, 74px);
+  flex: 0 0 auto;
   background: rgba(10,13,11,0.45);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -147,9 +176,14 @@ body {
   color: #4A1E00;
   box-shadow: 0 4px 0 rgba(0,0,0,0.35), inset 0 2px 2px rgba(255,255,255,0.35);
 }
+/* Action cleats are rounded-rectangles (squircles), like the reference bar */
 .ctrl-btn.hb.action {
-  background: linear-gradient(180deg, #FFB65C 0%, #F97316 100%);
-  color: #3A1600;
+  background: linear-gradient(180deg, #F04E3E 0%, #C4321F 100%);
+  border-color: rgba(0,0,0,0.4);
+  color: #FFE7B0;
+  border-radius: 26%;
+  width: clamp(56px, 16vw, 82px);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.4), inset 0 -3px 4px rgba(0,0,0,0.25);
 }
 .ctrl-btn.hb:active, .ctrl-btn.hb.pressed {
   background: linear-gradient(180deg, #F97316 0%, #EA580C 100%);
@@ -157,20 +191,32 @@ body {
   transform: translateY(2px) scale(0.96);
   box-shadow: 0 1px 0 rgba(0,0,0,0.35), inset 0 2px 4px rgba(0,0,0,0.25);
 }
+.ctrl-btn.hb.action:active, .ctrl-btn.hb.action.pressed {
+  background: linear-gradient(180deg, #C4321F 0%, #9E2414 100%);
+  color: #FFD98A;
+  transform: translateY(2px) scale(0.96);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4), inset 0 2px 5px rgba(0,0,0,0.35);
+}
 
-/* Cleat icon + direction arrow overlay */
+/* Cleat icon + direction indicator overlay */
 .boot-icon {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.boot-arrow {
+.boot-svg { color: #FFD98A; }
+.boot-dir {
   position: absolute;
-  color: #3A1600;
+  color: #FFFFFF;
 }
-.boot-arrow-fwd { right: -3px; top: -7px; }
-.boot-arrow-up { right: 5px; top: -9px; }
+.boot-dir-fwd { right: -6px; top: 50%; transform: translateY(-50%); }
+.boot-dir-up { right: -2px; top: -8px; }
+.boot-lines {
+  position: absolute;
+  left: -12px;
+  color: #FFE7B0;
+}
 
 /* Menu bg image w/ overlay */
 .menu-bg {

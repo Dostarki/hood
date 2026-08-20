@@ -15,7 +15,7 @@ export const FIELD = {
 
 const GRAVITY = 0.75;
 const PLAYER_SPEED = 5.5;
-const JUMP_V = -16;
+const JUMP_V = -18.5;
 const BALL_BOUNCE = 0.72;
 const BALL_AIR_FRICTION = 0.9975;
 const BALL_GROUND_FRICTION = 0.985;
@@ -30,13 +30,13 @@ function len(x, y) { return Math.hypot(x, y); }
 class Player {
   constructor({ x, side, color, name, controlled, theme, bootId }) {
     this.x = x;
-    this.y = FIELD.GROUND_Y - 130;
+    this.y = FIELD.GROUND_Y - 100;
     this.vx = 0;
     this.vy = 0;
-    this.w = 90;
-    this.h = 130;
-    this.headR = 55;
-    this.bodyTop = 85; // relative offset where torso starts (below head)
+    this.w = 70;
+    this.h = 100;
+    this.headR = 42;
+    this.bodyTop = 66; // relative offset where torso starts (below head)
     this.onGround = true;
     this.side = side;          // 'left' | 'right'
     this.color = color;
@@ -224,8 +224,9 @@ function collideBallPlayer(ball, player) {
       }
       audio.kick();
       player.kicking = 0; // End kick so it only hits once
+      return { type: 'kick', x: ball.x, y: ball.y };
     }
-    return true;
+    return { type: 'body', x: ball.x, y: ball.y };
   }
   // Head collision (round)
   const hdx = ball.x - player.headX;
@@ -243,15 +244,17 @@ function collideBallPlayer(ball, player) {
       ball.vy = ny * HEAD_KICK_POWER * 0.3 - 4;      // gentle upward pop
       ball.vx = player.vx * 0.3 - player.ownGoalDir * 2; // nudge away from own goal
       audio.bounce();
+      return { type: 'header-soft', x: player.headX + nx * player.headR, y: player.headY + ny * player.headR };
     } else {
       // Header (front): full power away from our goal.
       ball.vx = nx * HEAD_KICK_POWER + player.vx * 0.6;
       ball.vy = ny * HEAD_KICK_POWER * 0.9 - 3;
-      audio.kick();
+      audio.header();
+      const power = Math.min(1, (len(ball.vx, ball.vy)) / 16);
+      return { type: 'header', x: player.headX + nx * player.headR, y: player.headY + ny * player.headR, nx, ny, power };
     }
-    return true;
   }
-  return false;
+  return null;
 }
 
 export class GameEngine {
@@ -264,6 +267,9 @@ export class GameEngine {
     this.remoteInput = { left: false, right: false, jump: false, shoot: false, lob: false };
     this.lastRemoteState = null;
     this.stateTickCount = 0;
+    this.snapBuffer = [];      // guest: timed snapshot buffer for interpolation
+    this.interpDelay = 110;    // ms render delay behind newest snapshot
+    this.ballLocalUntil = 0;   // guest: ms timestamp until which the ball is locally controlled after own contact
     this.ball = new Ball();
     this.scoreL = 0;
     this.scoreR = 0;
@@ -283,6 +289,7 @@ export class GameEngine {
     this.celebration = 0;   // frames of celebration
     this.lastScorer = null; // 'left' | 'right'
     this.confetti = [];     // particles
+    this.hits = [];         // header/impact flash effects
     this.shake = 0;
   }
 
@@ -293,8 +300,22 @@ export class GameEngine {
   step(dt) {
     if (this.ended || this.paused) return;
 
-    // Guest mode: skip simulation, only advance visual effects
+    // Guest mode: locally PREDICT own player for instant response, interpolate
+    // the host player from snapshots. The ball stays host-authoritative BUT we
+    // run a local contact check against our own predicted player so it never
+    // phases through — on contact the ball gets brief local control so it reacts
+    // instantly, then hands authority back to the host's snapshots.
     if (this.mode === 'guest') {
+      const now = performance.now();
+      this._stepGuestLocalPlayer();
+      const ballLocal = now < this.ballLocalUntil;
+      this._interpolateGuest(now, ballLocal);
+      if (ballLocal) this.ball.update();
+      const hit = collideBallPlayer(this.ball, this.ai);
+      if (hit) {
+        this._spawnHit(hit);
+        this.ballLocalUntil = now + 200; // brief local ball authority after contact
+      }
       this._updateParticles();
       if (this.shake > 0) this.shake *= 0.9;
       if (this.celebration > 0) this.celebration--;
@@ -329,8 +350,10 @@ export class GameEngine {
     this.ai.update();
     this.ball.update();
 
-    collideBallPlayer(this.ball, this.player);
-    collideBallPlayer(this.ball, this.ai);
+    const hitP = collideBallPlayer(this.ball, this.player);
+    if (hitP) this._spawnHit(hitP);
+    const hitA = collideBallPlayer(this.ball, this.ai);
+    if (hitA) this._spawnHit(hitA);
 
     // Prevent players overlap
     this._playersCollide();
@@ -436,6 +459,21 @@ export class GameEngine {
     Object.assign(this.remoteInput, input);
   }
 
+  // Guest-side client prediction: the guest owns the RIGHT player (this.ai).
+  // Simulate it locally from local input so movement/jump react instantly,
+  // instead of waiting a full network round-trip through the host.
+  _stepGuestLocalPlayer() {
+    const me = this.ai;
+    if (this.frozen > 0) { me.vx = 0; me.update(); return; }
+    if (this.input.left && !this.input.right) me.moveLeft();
+    else if (this.input.right && !this.input.left) me.moveRight();
+    else me.stop();
+    if (this.input.jump) me.jump();
+    if (this.input.lob) me.tryKick('lob');
+    else if (this.input.shoot) me.tryKick('shot');
+    me.update();
+  }
+
   snapshotState() {
     return {
       pX: Math.round(this.player.x), pY: Math.round(this.player.y),
@@ -453,15 +491,9 @@ export class GameEngine {
 
   applyRemoteState(s) {
     if (!s) return;
-    this.player.x = s.pX; this.player.y = s.pY;
-    this.player.facing = s.pF; this.player.kicking = s.pK;
-    this.player.legPhase = s.pL / 100;
-    this.ai.x = s.aX; this.ai.y = s.aY;
-    this.ai.facing = s.aF; this.ai.kicking = s.aK;
-    this.ai.legPhase = s.aL / 100;
-    this.ball.x = s.bX; this.ball.y = s.bY;
-    this.ball.vx = s.bVX / 10; this.ball.vy = s.bVY / 10;
-    this.ball.spin = s.bS / 100;
+    // Buffer timed snapshots; guest renders ~interpDelay ms in the past for smoothness.
+    this.snapBuffer.push({ t: performance.now(), s });
+    if (this.snapBuffer.length > 30) this.snapBuffer.shift();
     const oldScoreL = this.scoreL;
     const oldScoreR = this.scoreR;
     this.scoreL = s.sL; this.scoreR = s.sR;
@@ -474,6 +506,54 @@ export class GameEngine {
       this._spawnConfetti();
       audio.goal();
     }
+  }
+
+  _interpolateGuest(now, skipBall = false) {
+    const buf = this.snapBuffer;
+    if (buf.length === 0) return;
+    const renderT = now - this.interpDelay;
+    let a = buf[0];
+    let b = buf[buf.length - 1];
+    for (let i = buf.length - 1; i >= 0; i--) {
+      if (buf[i].t <= renderT) {
+        a = buf[i];
+        b = buf[i + 1] || buf[i];
+        break;
+      }
+    }
+    const k = b.t > a.t ? clamp((renderT - a.t) / (b.t - a.t), 0, 1) : 1;
+    // Snap instead of lerp on teleports (goal resets)
+    const L = (v1, v2) => (Math.abs(v2 - v1) > 300 ? v2 : v1 + (v2 - v1) * k);
+    const s1 = a.s, s2 = b.s;
+    this.player.x = L(s1.pX, s2.pX); this.player.y = L(s1.pY, s2.pY);
+    this.player.facing = s2.pF; this.player.kicking = s2.pK;
+    this.player.legPhase = L(s1.pL, s2.pL) / 100;
+    const newest = buf[buf.length - 1];
+    // Ball is host-authoritative via interpolation, UNLESS it is briefly under
+    // local control after our own player made contact (skipBall).
+    if (!skipBall) {
+      this.ball.x = L(s1.bX, s2.bX); this.ball.y = L(s1.bY, s2.bY);
+      this.ball.vx = s2.bVX / 10; this.ball.vy = s2.bVY / 10;
+      this.ball.spin = L(s1.bS, s2.bS) / 100;
+      // Buffer starved (packet gap): extrapolate the ball briefly using last velocity
+      if (renderT > newest.t) {
+        const dtMs = Math.min(200, renderT - newest.t);
+        this.ball.x += (newest.s.bVX / 10) * (dtMs / 16.67);
+        this.ball.y += (newest.s.bVY / 10) * (dtMs / 16.67);
+      }
+    }
+    // Reconcile the locally-predicted own player (this.ai) with the host.
+    // IMPORTANT: never apply a continuous pull toward the authoritative position —
+    // under network latency the authority always lags the prediction, so a pull
+    // would drag movement / feel like an invisible wall. Instead trust the local
+    // prediction during play and only SNAP on host-side teleports (goal resets)
+    // or extreme drift, which keeps movement free while staying in sync.
+    const me = this.ai;
+    const prevS = buf.length >= 2 ? buf[buf.length - 2].s : newest.s;
+    const teleX = Math.abs(newest.s.aX - prevS.aX) > 200;
+    const teleY = Math.abs(newest.s.aY - prevS.aY) > 200;
+    if (teleX || Math.abs(me.x - newest.s.aX) > 550) me.x = newest.s.aX;
+    if (teleY || Math.abs(me.y - newest.s.aY) > 550) me.y = newest.s.aY;
   }
 
   _playersCollide() {
@@ -552,7 +632,42 @@ export class GameEngine {
     }
   }
 
+  _spawnHit(hit) {
+    if (!hit) return;
+    if (hit.type === 'header') {
+      // Prominent flash + shockwave ring + impact spikes for a real header
+      const power = hit.power || 0.6;
+      this.hits.push({
+        x: hit.x, y: hit.y,
+        life: 20, maxLife: 20,
+        r0: 18, r1: 70 + power * 55,
+        spikes: 8,
+        color: '#FFE34D',
+        big: true,
+      });
+      this.shake = Math.max(this.shake, 6 + power * 8);
+    } else if (hit.type === 'header-soft') {
+      this.hits.push({
+        x: hit.x, y: hit.y,
+        life: 12, maxLife: 12,
+        r0: 12, r1: 42,
+        spikes: 6,
+        color: '#BFE9FF',
+        big: false,
+      });
+    }
+  }
+
+  _updateHits() {
+    const list = this.hits;
+    for (let i = list.length - 1; i >= 0; i--) {
+      list[i].life--;
+      if (list[i].life <= 0) list.splice(i, 1);
+    }
+  }
+
   _updateParticles() {
+    this._updateHits();
     const list = this.confetti;
     for (let i = list.length - 1; i >= 0; i--) {
       const p = list[i];

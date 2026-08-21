@@ -23,6 +23,8 @@ app.prepare().then(async () => {
   // MongoDB setup
   let db;
   let mongoClient;
+  let mongod;
+  
   try {
     mongoClient = new MongoClient(mongoUrl, {
       serverSelectionTimeoutMS: mongoConnectTimeoutMs
@@ -32,9 +34,20 @@ app.prepare().then(async () => {
     console.log('Connected to MongoDB');
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    console.warn(
-      `MongoDB unavailable at ${mongoUrl}. Running without persistence. ${reason}`
-    );
+    console.warn(`Local MongoDB unavailable at ${mongoUrl}. ${reason}`);
+    console.log('Starting in-memory MongoDB fallback...');
+    
+    try {
+      const { MongoMemoryServer } = require('mongodb-memory-server');
+      mongod = await MongoMemoryServer.create();
+      const uri = mongod.getUri();
+      mongoClient = new MongoClient(uri);
+      await mongoClient.connect();
+      db = mongoClient.db(dbName);
+      console.log(`Connected to In-Memory MongoDB at ${uri}`);
+    } catch (memErr) {
+      console.error('Failed to start in-memory MongoDB:', memErr);
+    }
   }
 
   const requireDb = (res) => {
@@ -504,6 +517,9 @@ app.prepare().then(async () => {
   const shutdown = async () => {
     if (mongoClient) {
       await mongoClient.close();
+    }
+    if (mongod) {
+      await mongod.stop();
     }
   };
 

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Play, Wifi, User, ShoppingBag, Trophy } from 'lucide-react';
+import { Volume2, VolumeX, Play, Wifi, User, ShoppingBag, Trophy, Package } from 'lucide-react';
 import { audio } from '@/game/audio';
 import StatsCard from '@/components/StatsCard';
 import { useAccount } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { toast } from "sonner";
 
-export default function MainMenu({ onStartAiMatch, onOpenProfile, onOpenBoots, onFindMatch, soundOn, onToggleSound, stats, playerTeamName }) {
+export default function MainMenu({ onStartAiMatch, onOpenProfile, onOpenBoots, onOpenInventory, onFindMatch, soundOn, onToggleSound, stats, playerTeamName }) {
   const { isConnected, address } = useAccount();
   const { openConnectModal } = useConnectModal();
   const [showNicknameModal, setShowNicknameModal] = useState(false);
@@ -198,6 +198,16 @@ export default function MainMenu({ onStartAiMatch, onOpenProfile, onOpenBoots, o
           >
             <ShoppingBag size={22} strokeWidth={2.5} />
             NFT-SHOP
+          </button>
+          <button
+            type="button"
+            data-testid="inventory-btn"
+            className="btn-brutal flex items-center gap-3"
+            style={{ borderColor: '#B14BF4', color: '#B14BF4', boxShadow: '4px 4px 0px #B14BF4' }}
+            onClick={() => { audio.menu(); onOpenInventory(); }}
+          >
+            <Package size={22} strokeWidth={2.5} />
+            ENVANTER
           </button>
           <button
             type="button"

@@ -211,6 +211,26 @@ app.prepare().then(async () => {
     }
   });
 
+  // Log a ranked stake payment (best-effort audit trail).
+  server.post('/api/ranked/pay', async (req, res) => {
+    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    try {
+      const { walletAddress, stakeUsd, txHash } = req.body;
+      if (!walletAddress || !txHash) return res.status(400).json({ error: 'Missing data' });
+      await db.collection('ranked_stakes').insertOne({
+        id: uuidv4(),
+        walletAddress,
+        stakeUsd: Number(stakeUsd) || 0,
+        txHash,
+        treasury: NFT_TREASURY,
+        createdAt: new Date()
+      });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Matchmaking logic
   class Player {
     constructor(ws, name, teamId, stake) {

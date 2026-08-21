@@ -37,6 +37,11 @@ Arcade side-view football game "KICKHOOD". 90-second matches.
 - Replaced procedural boot drawings with 7 AI-generated hand-drawn comic cleats matching the user's reference (golden classic cleat, starry sky, ink outline, cel shading, studs, stripes). Stored in `/app/public/boots/boot_1..7.jpg` (512px, optimized). `boots.js` has `image` field per boot.
 - Shop preview card and quick-select thumbnails now render these images (`<img>`), not canvas. `drawBootShowcase` left in renderer (unused). In-game player boots unchanged.
 
+## Inventory + Ranked Stake Payment (added 2026-06)
+- New **ENVANTER** menu button + `InventoryScreen.js`: shows the connected wallet's owned NFT boots (image, stats, price) via `/api/nft/owned`. Each item has a **SELL** button with a "SOON" badge (toast: "Yakında Aktif") — sell not yet active. Connect-wallet + empty states handled.
+- **RANKED PLAY**: `RankedStake.js` now requires an on-chain payment before matchmaking — selecting a stake ($1/$10/$50/$100) switches to Robinhood chain, converts USD→ETH at live rate, sends ETH to treasury `0x603a...096F` (sendTransaction + waitForTransactionReceipt), logs via `POST /api/ranked/pay` (collection `ranked_stakes`), then proceeds to `onSelect` → matchmaking. Price feed switched to reliable `/api/eth-price`.
+- Verified: ENVANTER button + inventory connect/empty states, `/api/ranked/pay` endpoint (curl). NOT verified end-to-end on-chain (needs real funded Robinhood wallet).
+
 ## Backlog / Next
 - Awaiting further user edit requests.
 

@@ -11,22 +11,6 @@ import { audio } from '@/game/audio';
 import { ArrowLeft, ChevronLeft, ChevronRight, FastForward, Zap, Lock, Check, Loader2 } from 'lucide-react';
 
 function BootCard({ boot, selected, owned }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    c.width = 220 * dpr;
-    c.height = 220 * dpr;
-    const ctx = c.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, 220, 220);
-    import('@/game/renderer').then(({ drawBootShowcase }) => {
-      drawBootShowcase(ctx, 110, 110, boot, 220);
-    });
-  }, [boot]);
-
   return (
     <div
       data-testid="player-boot-card"
@@ -37,7 +21,12 @@ function BootCard({ boot, selected, owned }) {
       }}
     >
       <div className="relative">
-        <canvas ref={canvasRef} style={{ width: 220, height: 220 }} />
+        <img
+          src={boot.image}
+          alt={boot.name}
+          data-testid="boot-image"
+          style={{ width: 220, height: 220, objectFit: 'cover', display: 'block' }}
+        />
         {boot.isNft && (
           <div
             className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 text-[10px] font-heading tracking-widest"
@@ -262,6 +251,7 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
                   }}
                   title={b.name}
                 >
+                  <img src={b.image} alt={b.name} style={{ width: 72, height: 72, objectFit: 'cover' }} className="rounded" />
                   <div className="font-heading text-sm tracking-widest mt-1" style={{ color: isSelected ? b.color : '#ffffff90' }}>{b.name}</div>
                   <div className="flex gap-2 mt-1">
                     <span className="text-xs text-[#00FF66]">S:{b.spdBonus}</span>

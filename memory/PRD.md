@@ -33,6 +33,10 @@ Arcade side-view football game "KICKHOOD". 90-second matches.
 - New high-quality showcase renderer `drawBootShowcase` (`src/game/renderer.js`): side-profile football cleat with starry night backdrop, sparkle stars, gloss highlight, laces panel, sole + studs, accent stripes (normal), nebula (galaxy), shine streak (reflection/golden). Used in shop preview cards; in-game `drawBoot` unchanged.
 - Each shop card now shows live ETH equivalent under the USD price (`/api/eth-price`, client refresh every 30s). Purchase converts USD→ETH at the live rate at buy time.
 
+## Boot Art = Reference Style (updated 2026-06)
+- Replaced procedural boot drawings with 7 AI-generated hand-drawn comic cleats matching the user's reference (golden classic cleat, starry sky, ink outline, cel shading, studs, stripes). Stored in `/app/public/boots/boot_1..7.jpg` (512px, optimized). `boots.js` has `image` field per boot.
+- Shop preview card and quick-select thumbnails now render these images (`<img>`), not canvas. `drawBootShowcase` left in renderer (unused). In-game player boots unchanged.
+
 ## Backlog / Next
 - Awaiting further user edit requests.
 

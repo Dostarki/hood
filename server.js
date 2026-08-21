@@ -13,6 +13,7 @@ const handle = app.getRequestHandler();
 const port = process.env.PORT || 80;
 const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
 const dbName = process.env.DB_NAME || 'neon_pitch';
+const mongoConnectTimeoutMs = Number(process.env.MONGO_CONNECT_TIMEOUT_MS || 2000);
 
 app.prepare().then(async () => {
   const server = express();
@@ -21,14 +22,26 @@ app.prepare().then(async () => {
 
   // MongoDB setup
   let db;
+  let mongoClient;
   try {
-    const client = new MongoClient(mongoUrl);
-    await client.connect();
-    db = client.db(dbName);
+    mongoClient = new MongoClient(mongoUrl, {
+      serverSelectionTimeoutMS: mongoConnectTimeoutMs
+    });
+    await mongoClient.connect();
+    db = mongoClient.db(dbName);
     console.log('Connected to MongoDB');
   } catch (err) {
-    console.error('MongoDB Connection Error:', err);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `MongoDB unavailable at ${mongoUrl}. Running without persistence. ${reason}`
+    );
   }
+
+  const requireDb = (res) => {
+    if (db) return true;
+    res.status(503).json({ error: 'MongoDB is unavailable' });
+    return false;
+  };
 
   server.use(express.json());
 
@@ -58,7 +71,7 @@ app.prepare().then(async () => {
 
   // User & Leaderboard Routes
   server.get('/api/user/:walletAddress', async (req, res) => {
-    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    if (!requireDb(res)) return;
     try {
       const user = await db.collection('users').findOne({ walletAddress: req.params.walletAddress });
       if (user) {
@@ -72,7 +85,7 @@ app.prepare().then(async () => {
   });
 
   server.post('/api/user/register', async (req, res) => {
-    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    if (!requireDb(res)) return;
     try {
       const { walletAddress, nickname } = req.body;
       if (!walletAddress || !nickname) return res.status(400).json({ error: 'Missing data' });
@@ -100,7 +113,7 @@ app.prepare().then(async () => {
   });
 
   server.post('/api/user/record-match', async (req, res) => {
-    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    if (!requireDb(res)) return;
     try {
       const { walletAddress, goalsScored } = req.body;
       if (!walletAddress || typeof goalsScored !== 'number') return res.status(400).json({ error: 'Missing data' });
@@ -116,7 +129,7 @@ app.prepare().then(async () => {
   });
 
   server.get('/api/leaderboard', async (req, res) => {
-    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    if (!requireDb(res)) return;
     try {
       const topUsers = await db.collection('users')
         .find({ nickname: { $exists: true, $ne: '' } })
@@ -124,6 +137,108 @@ app.prepare().then(async () => {
         .limit(10)
         .toArray();
       res.json(topUsers);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- NFT Boot Shop ---
+  const NFT_TREASURY = '0x603a26e0745aE579ad0F931307a386ddC3DD096F';
+  let _ethPriceCache = { usd: null, ts: 0 };
+
+  // Live ETH/USD price (used to convert USD-denominated NFT prices to ETH).
+  async function fetchEthUsd() {
+    // Primary: Coinbase spot (no key, reliable). Fallback: CoinGecko.
+    try {
+      const r = await fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot');
+      const d = await r.json();
+      const usd = parseFloat(d?.data?.amount);
+      if (usd) return usd;
+    } catch (e) { /* try next */ }
+    try {
+      const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+      const d = await r.json();
+      const usd = d?.ethereum?.usd;
+      if (usd) return usd;
+    } catch (e) { /* give up */ }
+    return null;
+  }
+
+  server.get('/api/eth-price', async (req, res) => {
+    try {
+      const now = Date.now();
+      if (_ethPriceCache.usd && now - _ethPriceCache.ts < 60000) {
+        return res.json({ usdPerEth: _ethPriceCache.usd, cached: true });
+      }
+      const usd = await fetchEthUsd();
+      if (!usd) throw new Error('No price');
+      _ethPriceCache = { usd, ts: now };
+      res.json({ usdPerEth: usd, cached: false });
+    } catch (err) {
+      if (_ethPriceCache.usd) return res.json({ usdPerEth: _ethPriceCache.usd, cached: true, stale: true });
+      res.status(502).json({ error: 'Price feed unavailable' });
+    }
+  });
+
+  // Which NFT boots a wallet owns (free boot handled client-side).
+  server.get('/api/nft/owned/:walletAddress', async (req, res) => {
+    if (!requireDb(res)) return;
+    try {
+      const user = await db.collection('users').findOne({ walletAddress: req.params.walletAddress });
+      res.json({ ownedBoots: (user && user.ownedBoots) || [] });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Record an NFT boot purchase after the on-chain transfer is confirmed.
+  server.post('/api/nft/purchase', async (req, res) => {
+    if (!requireDb(res)) return;
+    try {
+      const { walletAddress, bootId, txHash, priceUsd } = req.body;
+      if (!walletAddress || !bootId || !txHash) return res.status(400).json({ error: 'Missing data' });
+
+      await db.collection('users').updateOne(
+        { walletAddress },
+        {
+          $addToSet: { ownedBoots: bootId },
+          $setOnInsert: { walletAddress, totalGoals: 0, createdAt: new Date() }
+        },
+        { upsert: true }
+      );
+
+      await db.collection('nft_purchases').insertOne({
+        id: uuidv4(),
+        walletAddress,
+        bootId,
+        txHash,
+        priceUsd: Number(priceUsd) || 0,
+        treasury: NFT_TREASURY,
+        createdAt: new Date()
+      });
+
+      const user = await db.collection('users').findOne({ walletAddress });
+      res.json({ success: true, ownedBoots: (user && user.ownedBoots) || [bootId] });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Log a ranked stake payment (best-effort audit trail).
+  server.post('/api/ranked/pay', async (req, res) => {
+    if (!requireDb(res)) return;
+    try {
+      const { walletAddress, stakeUsd, txHash } = req.body;
+      if (!walletAddress || !txHash) return res.status(400).json({ error: 'Missing data' });
+      await db.collection('ranked_stakes').insertOne({
+        id: uuidv4(),
+        walletAddress,
+        stakeUsd: Number(stakeUsd) || 0,
+        txHash,
+        treasury: NFT_TREASURY,
+        createdAt: new Date()
+      });
+      res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -384,5 +499,19 @@ app.prepare().then(async () => {
   httpServer.listen(port, (err) => {
     if (err) throw err;
     console.log(`> Ready on http://localhost:${port}`);
+  });
+
+  const shutdown = async () => {
+    if (mongoClient) {
+      await mongoClient.close();
+    }
+  };
+
+  process.once('SIGINT', () => {
+    shutdown().finally(() => process.exit(0));
+  });
+
+  process.once('SIGTERM', () => {
+    shutdown().finally(() => process.exit(0));
   });
 });

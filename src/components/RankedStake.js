@@ -1,33 +1,43 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Wifi, Wallet } from 'lucide-react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
+import { ArrowLeft, Wifi, Wallet, Loader2 } from 'lucide-react';
+import { ConnectButton, useConnectModal } from '@rainbow-me/rainbowkit';
+import { useAccount, useConfig } from 'wagmi';
+import { sendTransaction, waitForTransactionReceipt, switchChain, getAccount } from '@wagmi/core';
+import { parseEther } from 'viem';
+import { toast } from 'sonner';
+import { robinhoodChain } from '@/lib/chain';
+import { NFT_TREASURY_ADDRESS } from '@/game/boots';
 import { audio } from '@/game/audio';
 
 const STAKES = [1, 10, 50, 100];
 const STAKE_COLORS = { 1: '#00FF66', 10: '#4CC9F0', 50: '#F4E04D', 100: '#FF0055' };
 
 export default function RankedStake({ onBack, onSelect }) {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const config = useConfig();
   const [ethPrice, setEthPrice] = useState(null);
   const [priceErr, setPriceErr] = useState(false);
+  const [payingStake, setPayingStake] = useState(null);
 
   useEffect(() => {
     let active = true;
     const fetchPrice = async () => {
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const res = await fetch('/api/eth-price');
         const data = await res.json();
-        if (active && data?.ethereum?.usd) {
-          setEthPrice(data.ethereum.usd);
+        if (active && data?.usdPerEth) {
+          setEthPrice(data.usdPerEth);
           setPriceErr(false);
+        } else if (active) {
+          setPriceErr(true);
         }
       } catch (_) {
         if (active) setPriceErr(true);
       }
     };
     fetchPrice();
-    const id = setInterval(fetchPrice, 60000);
+    const id = setInterval(fetchPrice, 30000);
     return () => { active = false; clearInterval(id); };
   }, []);
 
@@ -35,6 +45,53 @@ export default function RankedStake({ onBack, onSelect }) {
     if (!ethPrice) return null;
     const eth = usd / ethPrice;
     return eth < 0.001 ? eth.toFixed(6) : eth.toFixed(5);
+  };
+
+  const handleStake = async (stake) => {
+    if (payingStake) return;
+    if (!isConnected || !address) {
+      toast.error('Wallet Connection Required', { description: 'Connect your wallet to enter Ranked Play.' });
+      if (openConnectModal) openConnectModal();
+      return;
+    }
+    audio.menu();
+    try {
+      setPayingStake(stake);
+      // Ensure we are on the Robinhood chain
+      const acct = getAccount(config);
+      if (acct.chainId !== robinhoodChain.id) {
+        toast.message('Switching network…', { description: 'Approve the Robinhood network in your wallet.' });
+        await switchChain(config, { chainId: robinhoodChain.id });
+      }
+      // Live price → ETH amount for the USD stake
+      const pr = await fetch('/api/eth-price').then((r) => r.json());
+      const rate = pr?.usdPerEth;
+      if (!rate) throw new Error('Price feed unavailable');
+      const ethAmount = (stake / rate).toFixed(18);
+
+      toast.message('Confirm stake payment', { description: `Sending ~${ethAmount} ETH ($${stake} stake)` });
+      const hash = await sendTransaction(config, {
+        to: NFT_TREASURY_ADDRESS,
+        value: parseEther(ethAmount),
+        chainId: robinhoodChain.id,
+      });
+      toast.message('Transaction sent', { description: 'Waiting for confirmation…' });
+      await waitForTransactionReceipt(config, { hash });
+
+      // Log the ranked stake payment (best-effort)
+      fetch('/api/ranked/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: address, stakeUsd: stake, txHash: hash }),
+      }).catch(() => {});
+
+      toast.success('Stake paid!', { description: 'Searching for an opponent…' });
+      onSelect(stake);
+    } catch (err) {
+      const msg = err?.shortMessage || err?.message || 'Transaction failed';
+      toast.error('Payment failed', { description: msg });
+      setPayingStake(null);
+    }
   };
 
   return (
@@ -73,7 +130,7 @@ export default function RankedStake({ onBack, onSelect }) {
               <div className="font-heading text-2xl tracking-widest">CONNECT WALLET</div>
             </div>
             <p className="text-white/70 font-body leading-relaxed">
-              You must connect your wallet before entering Ranked Play. No transfer is made — it is only required to enter.
+              You must connect your wallet before entering Ranked Play. The selected stake is transferred in Robinhood ETH, then matchmaking begins.
             </p>
             <ConnectButton label="Connect Wallet" showBalance={false} chainStatus="none" accountStatus="address" />
           </div>
@@ -91,26 +148,41 @@ export default function RankedStake({ onBack, onSelect }) {
               {STAKES.map((s) => {
                 const c = STAKE_COLORS[s];
                 const eth = ethFor(s);
+                const isPaying = payingStake === s;
+                const disabled = payingStake !== null;
                 return (
                   <button
                     type="button"
                     key={s}
                     data-testid={`stake-btn-${s}`}
-                    onClick={() => { audio.menu(); onSelect(s); }}
-                    className="flex flex-col items-center justify-center py-10 border-2 bg-black/50 backdrop-blur-md hover:bg-black/70 transition-colors"
+                    disabled={disabled}
+                    onClick={() => handleStake(s)}
+                    className="flex flex-col items-center justify-center py-10 border-2 bg-black/50 backdrop-blur-md hover:bg-black/70 transition-colors disabled:opacity-50"
                     style={{ borderColor: c, boxShadow: `4px 4px 0px ${c}` }}
                   >
-                    <div className="font-heading text-5xl leading-none" style={{ color: c }}>${s}</div>
-                    <div className="font-body text-white/60 text-sm mt-3" data-testid={`stake-eth-${s}`}>
-                      {eth ? `≈ ${eth} ETH` : (priceErr ? '≈ — ETH' : 'Loading…')}
-                    </div>
+                    {isPaying ? (
+                      <>
+                        <Loader2 size={40} className="animate-spin" style={{ color: c }} />
+                        <div className="font-heading text-white/70 text-xs mt-3 tracking-widest">PROCESSING…</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-heading text-5xl leading-none" style={{ color: c }}>${s}</div>
+                        <div className="font-body text-white/60 text-sm mt-3" data-testid={`stake-eth-${s}`}>
+                          {eth ? `≈ ${eth} ETH` : (priceErr ? '≈ — ETH' : 'Loading…')}
+                        </div>
+                      </>
+                    )}
                   </button>
                 );
               })}
             </div>
 
             <p className="mt-8 text-white/50 text-sm font-body leading-relaxed max-w-lg">
-              You will only be matched with players who chose the same stake. If no one is available yet, you wait in queue until an equal-stake opponent appears.
+              Your selected stake is transferred as Robinhood ETH to {NFT_TREASURY_ADDRESS.slice(0, 6)}…{NFT_TREASURY_ADDRESS.slice(-4)}. Matchmaking begins after the payment is confirmed. You are only matched with players who chose the same stake.
+            </p>
+            <p className="mt-3 font-heading tracking-widest text-sm" style={{ color: '#00FF66' }} data-testid="ranked-2x-note">
+              WIN THE MATCH TO GET 2X YOUR STAKE BACK.
             </p>
           </>
         )}

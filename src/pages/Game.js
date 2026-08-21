@@ -8,6 +8,7 @@ import EndScreen from '@/components/EndScreen';
 import PauseOverlay from '@/components/PauseOverlay';
 import ProfileScreen from '@/components/ProfileScreen';
 import BootScreen from '@/components/BootScreen';
+import InventoryScreen from '@/components/InventoryScreen';
 import Matchmaking from '@/components/Matchmaking';
 import RankedStake from '@/components/RankedStake';
 import { useKeyboardInput } from '@/hooks/useInput';
@@ -22,6 +23,7 @@ const STATE = {
   MENU: 'menu',
   PROFILE: 'profile',
   BOOTS: 'boots',
+  INVENTORY: 'inventory',
   STAKE: 'stake',
   MATCHMAKING: 'matchmaking',
   PLAYING: 'playing',
@@ -221,6 +223,12 @@ export default function Game() {
     setState(STATE.BOOTS);
   }, []);
 
+  const openInventory = useCallback(() => {
+    audio.init();
+    audio.resume();
+    setState(STATE.INVENTORY);
+  }, []);
+
   const startAiMatch = useCallback(() => {
     audio.init();
     audio.resume();
@@ -374,6 +382,7 @@ export default function Game() {
           onStartAiMatch={startAiMatch}
           onOpenProfile={openProfile}
           onOpenBoots={openBoots}
+          onOpenInventory={openInventory}
           onFindMatch={openStakeSelect}
           soundOn={soundOn}
           onToggleSound={toggleSound}
@@ -394,6 +403,9 @@ export default function Game() {
           onBack={() => setState(STATE.MENU)}
           onSave={saveBoots}
         />
+      )}
+      {state === STATE.INVENTORY && (
+        <InventoryScreen onBack={() => setState(STATE.MENU)} />
       )}
       {state === STATE.STAKE && (
         <RankedStake

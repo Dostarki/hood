@@ -1,94 +1,52 @@
-# KICKHOOD — Product Requirements
+# KICKHOOD (Neon Pitch Striker) - PRD
 
-## Guest Client-Side Prediction (2026-06)
-- **Guest input gecikmesi fix**: Guest artık "dumb terminal" değil. Kendi oyuncusunu (`this.ai`, sağ taraf) yerel input ile ANINDA simüle ediyor (`_stepGuestLocalPlayer` → engine `step()` guest dalında interpolasyondan önce çağrılır). Zıplama/hareket round-trip beklemeden anlık.
-- **Reconciliation**: `_interpolateGuest` sonunda host'un otoritatif pozisyonuna yumuşak düzeltme. X: geniş dead-zone (>100px 0.15, >350px snap) → doğal RTT offseti hareketi sürüklemez. Y: sadece yerdeyken düzeltilir (havadayken zıplama bozulmaz), >350px snap (gol reset). Host player + top hâlâ interpolasyonla (110ms) render edilir.
-- ⚠️ Frontend değişikliği → `cd /app && yarn build && sudo supervisorctl restart frontend` zorunlu (production mode).
-- Test durumu: Kod build OK, AI/host yolu değişmedi (regresyon yok). Gerçek 2-oyunculu ranked maç testi cüzdan-bağlantı gateway + iki eşzamanlı client gerektirdiğinden KULLANICI DOĞRULAMASI BEKLENİYOR.
-
-
-## Online Stabilite & Production Mode (2026-06)
-- **Guest kasma fix**: `engine.js` guest tarafına snapshot interpolation eklendi (`snapBuffer` + `_interpolateGuest`, 110ms render gecikmesi, ışınlanma >300px'te snap, paket boşluğunda top ekstrapolasyonu). Host state gönderimi 20Hz→30Hz, guest input 25Hz→30Hz (`Game.js`).
-- **Kopma fix**: WS keepalive (client 10sn JSON ping `net.js`, server 30sn ws.ping heartbeat) + **maç içi otomatik yeniden bağlanma**: `match_start` artık `token` içerir; soket düşerse client 1.2sn arayla max 10 deneme resume yapar; server 15sn grace period tutar (`handleDisconnect`/`resume`/sweep). Eventler: `opponent_reconnecting/opponent_reconnected/resumed/resume_failed`. Oyunda sarı "RECONNECTING…" banner (`reconnect-banner`) + engine pause; resume başarısızsa maç `opponent_left` gibi biter. Online maçta `beforeunload` uyarısı.
-- **Sayfa yenilenme fix**: Uygulama **PRODUCTION modda** (`/app/.env` → `NODE_ENV=production`, `next build`). Dev-HMR kaynaklı `_hardReload` tam sayfa yenilemeleri ortadan kalktı.
-- ⚠️ **ÖNEMLİ — HOT RELOAD KAPALI**: Kod değişikliğinden sonra `cd /app && yarn build && sudo supervisorctl restart frontend` gerekir. Build sırasında frontend'i durdur (`supervisorctl stop frontend`), yoksa dev süreç `.next`'i bozar (MODULE_NOT_FOUND vendor-chunks hatası yaşandı).
-- Test: iteration_5 %100 (backend 9/9 WS senaryosu: eşleşme+token, relay, kirli kopma→resume→state relay, kötü token reddi, ~15.9sn grace→opponent_left; frontend 4/4 regresyon). Test scriptleri: `/app/tests/ws_resume_test.js`, `/app/tests/ws_grace_expiry_test.js`.
-
-## Ranked Stakes + Hard AI (2026-06)
-- **AI zorluğu sabit HARD**: `engine.js._updateAI()` yeniden yazıldı (hızlı reactSpeed ~PLAYER_SPEED*1.12, top tahmini, topun gol tarafına geçme, güvenilir şut/kafa/aşırtma). Menüde zorluk seçimi yok.
-- **Ranked Play stake seçimi**: RANKED PLAY → yeni `RankedStake.js` ekranı. **Cüzdan bağlı olması ZORUNLU** (wagmi `useAccount`); bağlı değilse `ranked-connect-prompt` + inline ConnectButton gösterilir.
-- Bağlıyken $1/$10/$50/$100 butonları; her butonun altında **canlı ETH karşılığı** (CoinGecko `simple/price` ETH/USD, 60sn'de bir yenilenir, CORS `*`, key gerekmez). Transfer YOK, sadece seçim.
-- **Stake bazlı eşleşme**: `server.js` artık her stake için ayrı FIFO kuyruk (`waitingByStake`). Sadece aynı stake'i seçenler eşleşir; eşleşmeyen sırada bekler. `net.findMatch(name, teamId, stake)`, `match_start` mesajına `stake` eklendi.
-- Doğrulama: backend WebSocket testi (iki $100 eşleşti, $50 sırada kaldı) + testing agent iteration_4 %100 (stake ekranı cüzdan kapısı, Back, HARD AI maç smoke). Not: bağlı-cüzdan stake butonları + ETH gösterimi otomasyon ortamında cüzdan olmadığı için test edilemedi; kod ve CoinGecko uç noktası doğrulandı.
-
-## Rebrand & Localization (2026-06)
-- Proje adı **KickHood** olarak değiştirildi (başlık: KICK + neon yeşil HOOD, sekme başlığı `<title>KickHood`)
-- Tüm arayüz **İngilizceye** çevrildi (MainMenu, ProfileScreen, BootScreen/Shop, Matchmaking, HUD, EndScreen, PauseOverlay, StatsCard, MobileControls, canvas metinleri: GOAL!!!/GREAT SHOT!/CPU SCORED, takım & krampon isimleri, server default name PLAYER)
-- Ana menü değişiklikleri: **Ayarlar (Settings) kaldırıldı**; "Oyna"→**AI-PLAY**, "Krampon"→**SHOP** (ShoppingBag ikonu), "Maç Bul"→**RANKED PLAY**, "Profil"→PROFILE, "Ses"→SOUND ON/OFF
-- Not: parallel same-file search_replace race yaşandı → aynı dosyaya eş zamanlı düzenleme yerine sıralı yapılmalı
-
-## Original Problem Statement
-Web tarayıcısında çalışan 2D futbol oyunu geliştir. Hızlı arcade futbol mantığında, tek oyuncu bilgisayara karşı. HTML5 Canvas + React. Klavye (WASD/oklar/space) ve mobil dokunmatik butonlar. Skor, süre (90sn), gol animasyonu, ses efektleri. Yan görünüş (side-view), modern minimalist stil, stilize futbolcu figürleri, programatik ses efektleri (Web Audio API), responsive mobil destekli.
-
-## User Choices (from ask_human)
-- Görsel stil: Modern minimalist
-- Perspektif: Yan görünüş (Head Ball tarzı)
-- Süre / zorluk: Sabit 90 saniye, orta zorluk AI
-- Ses: Programatik Web Audio SFX
-- Karakter: Stilize futbolcu figürleri
+## Problem Statement
+GitHub reposundan (https://github.com/Dostarki/hood) proje çekildi ve Emergent ortamında çalışır hale getirildi. Kullanıcı önce projeyi çalıştırmak, sonra düzenlemelere karar vermek istiyor.
 
 ## Architecture
-- **Frontend only** React 19 + HTML5 Canvas + Tailwind (Bebas Neue + Outfit fonts)
-- **No backend dependency** — game runs entirely client-side. Backend left as-is (hello-world FastAPI).
-- **Game engine**: fixed-timestep-ish loop via requestAnimationFrame in `/app/frontend/src/game/engine.js`
-- **Rendering**: pure Canvas2D in `/app/frontend/src/game/renderer.js`, coordinate space 1600x900 scaled to viewport with letterboxing
-- **Audio**: `AudioContext` oscillator-based SFX (`/app/frontend/src/game/audio.js`)
-- **State machine**: MENU → PLAYING → PAUSED → ENDED (see `/app/frontend/src/pages/Game.js`)
+- **Frontend/Server**: Next.js 14 (pages router) + custom `server.js` (Express + WebSocket + MongoDB). Runs on port 3000 via supervisor `frontend` (`yarn start` -> `cd /app && node server.js`).
+- **Backend proxy**: FastAPI (`backend/server.py`) on port 8001. Reverse-proxies `/api/*` HTTP and `/api/ws` WebSocket to the Node server on 3000 (Emergent ingress routes `/api` -> 8001).
+- **Database**: MongoDB Atlas (configured in root `/app/.env`, DB: `basetobacco`). Collections: `users`, `status_checks`.
+- **Web3**: wagmi + RainbowKit + viem, custom "Robinhood Chain" (id 4663). WalletConnect project id in `.env`.
 
-## Implemented (2026-06) — RainbowKit Cüzdan Entegrasyonu
-- RainbowKit v2 + wagmi v2 + viem v2 kuruldu (`@tanstack/react-query` zaten mevcuttu)
-- Sağ üstte her ekranda sabit "Connect Wallet" butonu (`/app/src/components/WalletButton.js`, data-testid `wallet-connect-container`), `_app.js` içinde global render
-- Provider sırası: WagmiProvider → QueryClientProvider → RainbowKitProvider (neon yeşil darkTheme)
-- Özel zincir: Robinhood Chain (id 4663, RPC https://rpc.mainnet.chain.robinhood.com, ETH, explorer robinhoodchain.blockscout.com) — `/app/src/lib/chain.js`
-- Config: `/app/src/lib/wagmi.js` getDefaultConfig, projectId env `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` (/app/.env), ssr:true
-- ConnectButton showBalance=true → bağlanınca adres + ETH bakiye; yanlış ağda otomatik "Wrong network" uyarısı (yalnızca Robinhood Chain tanımlı)
-- Test: iteration_3.json %100 (4/4) — buton, modal (Rainbow/Base/MetaMask/WalletConnect), oyun içi kalıcılık, hata yok
-- Not: Gerçek cüzdan bağlantısı için kullanıcının tarayıcı cüzdanı (MetaMask vb.) gerekir; otomasyon ortamında tam bağlantı test edilemez
+## Game Overview
+Arcade side-view football game "KICKHOOD". 90-second matches.
+- **AI-PLAY**: single-player vs CPU (requires wallet connection).
+- **RANKED PLAY**: online multiplayer with stake tiers, matchmaking + reconnection via WebSocket.
+- **PROFILE / SHOP (Boots)**: team & boot customization, nickname registration.
+- **Leaderboard**: "Top 10 Goal Kings" from MongoDB `users.totalGoals`.
 
-## Implemented (2026-06) — Street Style Görsel Yenileme
-- Kullanıcının paylaştığı Head Ball 2 referans görseline uygun sahne (`/app/src/game/renderer.js`):
-  - Grafiti kaplı beton duvar, ayakta tezahürat yapan çizgi film seyirci kalabalığı
-  - Tel örgü (chain-link) çit, sokak lambaları, açık mavi gökyüzü + bulutlar
-  - Beyaz çerçeveli kaleler (dik ön direk, eğik arka destek, beyaz file ağı)
-  - Yıpranmış çim saha (toprak lekeleri, beyaz çizgiler, perspektif orta yuvarlak, ceza sahaları)
-  - Sahanın altında kahverengi toprak zemin (çakıl/benek dokulu)
+## Status (2026-06)
+- [DONE] Repo pulled into /app, node deps installed, backend deps installed.
+- [DONE] Both services running; app loads at preview URL; leaderboard reads live from Atlas.
+- [DONE] Main menu, wallet gate, leaderboard verified via screenshot.
 
-## Implemented (2026-02-13)
-- Main menu (Neon Pitch Striker branding, Oyna/Ayarlar/Ses toggle)
-- Side-view canvas: pitch, dual goals with nets, ground stripes, stadium bg
-- Player + AI with stylized bodies (head, body, animated legs, arms, kick anim)
-- Ball with physics (gravity, bounce, air/ground friction, rolling shadow)
-- Collisions: body-rect + head-circle vs ball, ball vs walls, ball vs ground
-- Kick action: Space (desktop) / Şut button (mobile) applies directional impulse
-- AI: pursues ball, jumps for headers, kicks when close, retreats to defend
-- Goal detection + score reset + 800ms freeze + siren SFX
-- 90s countdown timer with warning color under 10s
-- End screen with winner and rematch
-- ESC pause overlay
-- Keyboard input (A/D/W/Space + Arrow keys)
-- Mobile virtual controls (pointer events, multi-touch capable, semi-transparent)
-- Programmatic SFX: kick, jump, bounce, goal, whistle, menu beep
-- Responsive canvas (DPR-aware, resize/orientation listeners)
+## NFT Boot Shop (added 2026-06)
+- MainMenu button renamed SHOP -> **NFT-SHOP**; BootScreen header -> NFT-SHOP.
+- Boots renamed + priced (`src/game/boots.js`): STANDARD BLACK (free), FLAME NFT $1, STORM NFT $3, LIGHTNING NFT $10, TITANIUM NFT $15, GALAXY NFT $30, GOLDEN NFT $50 (S:30 P:25, new).
+- Payment: on "BUY", frontend switches to Robinhood chain, fetches live ETH/USD, converts USD price to ETH, and sends native ETH from the connected wallet to treasury `0x603a26e0745aE579ad0F931307a386ddC3DD096F` via `@wagmi/core` sendTransaction + waitForTransactionReceipt.
+- Backend (`server.js`): `GET /api/eth-price` (Coinbase primary, CoinGecko fallback, 60s cache), `POST /api/nft/purchase` (records ownership + tx in `nft_purchases`, upserts `users.ownedBoots`), `GET /api/nft/owned/:wallet`.
+- Ownership gates EQUIP: free boot always usable; NFT boots require purchase before equipping.
+- Verified: UI states, all names/prices/stats, eth-price feed, purchase+owned endpoints (curl). NOT verified end-to-end on-chain (requires a real funded wallet on Robinhood chain).
 
-## Backlog / Next Actions (P1)
-- Difficulty selector (Easy/Medium/Hard) with AI tuning
-- Configurable match length in settings
-- Power meter for shots (hold Space to charge)
-- Simple particle effects on goal (confetti/streamers)
-- Best-of series / tournament mode
-- Local leaderboard (persist high scores in localStorage)
-- Optional 2-player local mode (P2 uses different keys)
+## Boot Visuals + Live ETH (added 2026-06)
+- New high-quality showcase renderer `drawBootShowcase` (`src/game/renderer.js`): side-profile football cleat with starry night backdrop, sparkle stars, gloss highlight, laces panel, sole + studs, accent stripes (normal), nebula (galaxy), shine streak (reflection/golden). Used in shop preview cards; in-game `drawBoot` unchanged.
+- Each shop card now shows live ETH equivalent under the USD price (`/api/eth-price`, client refresh every 30s). Purchase converts USD→ETH at the live rate at buy time.
 
-## Notes
-- All lint clean in our code; existing shadcn UI files have pre-existing warnings (unused by our game).
-- Test iteration 1 passed at ~95% (see `/app/test_reports/iteration_1.json`); one LOW-priority hardening applied.
+## Boot Art = Reference Style (updated 2026-06)
+- Replaced procedural boot drawings with 7 AI-generated hand-drawn comic cleats matching the user's reference (golden classic cleat, starry sky, ink outline, cel shading, studs, stripes). Stored in `/app/public/boots/boot_1..7.jpg` (512px, optimized). `boots.js` has `image` field per boot.
+- Shop preview card and quick-select thumbnails now render these images (`<img>`), not canvas. `drawBootShowcase` left in renderer (unused). In-game player boots unchanged.
+
+## Inventory + Ranked Stake Payment (added 2026-06)
+- New **ENVANTER** menu button + `InventoryScreen.js`: shows the connected wallet's owned NFT boots (image, stats, price) via `/api/nft/owned`. Each item has a **SELL** button with a "SOON" badge (toast: "Yakında Aktif") — sell not yet active. Connect-wallet + empty states handled.
+- **RANKED PLAY**: `RankedStake.js` now requires an on-chain payment before matchmaking — selecting a stake ($1/$10/$50/$100) switches to Robinhood chain, converts USD→ETH at live rate, sends ETH to treasury `0x603a...096F` (sendTransaction + waitForTransactionReceipt), logs via `POST /api/ranked/pay` (collection `ranked_stakes`), then proceeds to `onSelect` → matchmaking. Price feed switched to reliable `/api/eth-price`.
+- Verified: ENVANTER button + inventory connect/empty states, `/api/ranked/pay` endpoint (curl). NOT verified end-to-end on-chain (needs real funded Robinhood wallet).
+
+## English text + 2x note + in-match boot (added 2026-06)
+- All Turkish strings in `InventoryScreen.js` and `RankedStake.js` (and INVENTORY menu button) converted to English.
+- Ranked screen now shows: "WIN THE MATCH TO GET 2X YOUR STAKE BACK." (`ranked-2x-note`).
+- In-match player boot already reflects the equipped bootId (color/effect) via engine `getBootById` → `drawBoot`; added a colored NFT aura glow in `drawBoot` so purchased boot color/effect stands out on the field.
+
+## Backlog / Next
+- Awaiting further user edit requests.
+

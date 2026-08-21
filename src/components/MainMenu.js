@@ -207,7 +207,7 @@ export default function MainMenu({ onStartAiMatch, onOpenProfile, onOpenBoots, o
             onClick={() => { audio.menu(); onOpenInventory(); }}
           >
             <Package size={22} strokeWidth={2.5} />
-            ENVANTER
+            INVENTORY
           </button>
           <button
             type="button"

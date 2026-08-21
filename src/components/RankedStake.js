@@ -179,7 +179,10 @@ export default function RankedStake({ onBack, onSelect }) {
             </div>
 
             <p className="mt-8 text-white/50 text-sm font-body leading-relaxed max-w-lg">
-              Seçtiğin bedel {NFT_TREASURY_ADDRESS.slice(0, 6)}…{NFT_TREASURY_ADDRESS.slice(-4)} cüzdanına Robinhood ETH olarak transfer edilir. Ödeme onaylandıktan sonra rakip aranmaya başlanır. Yalnızca aynı bedeli seçen oyuncularla eşleşirsin.
+              Your selected stake is transferred as Robinhood ETH to {NFT_TREASURY_ADDRESS.slice(0, 6)}…{NFT_TREASURY_ADDRESS.slice(-4)}. Matchmaking begins after the payment is confirmed. You are only matched with players who chose the same stake.
+            </p>
+            <p className="mt-3 font-heading tracking-widest text-sm" style={{ color: '#00FF66' }} data-testid="ranked-2x-note">
+              WIN THE MATCH TO GET 2X YOUR STAKE BACK.
             </p>
           </>
         )}

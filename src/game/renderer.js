@@ -625,6 +625,20 @@ export function drawBoot(ctx, x, y, facing, boot, scale = 1, rotation = 0) {
   ctx.rotate(rotation); 
   ctx.scale(scale, scale);
 
+  // NFT boot aura: make special boot colors/effects pop on the field
+  if (boot && (boot.effect || (boot.spdBonus || 0) > 0)) {
+    ctx.save();
+    const grad = ctx.createRadialGradient(5, 5, 2, 5, 5, 46);
+    grad.addColorStop(0, boot.color || '#ffffff');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(5, 5, 46, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#111';
 

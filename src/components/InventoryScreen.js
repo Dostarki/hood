@@ -26,8 +26,8 @@ export default function InventoryScreen({ onBack }) {
 
   const handleSell = () => {
     audio.menu();
-    toast.message('SELL — Yakında Aktif', {
-      description: 'NFT krampon satışı çok yakında açılacak.',
+    toast.message('SELL — Coming Soon', {
+      description: 'NFT boot selling will open very soon.',
     });
   };
 
@@ -48,7 +48,7 @@ export default function InventoryScreen({ onBack }) {
 
         <div className="flex items-center gap-3 mb-4">
           <Package size={16} strokeWidth={2.5} color="#B14BF4" />
-          <div className="font-heading text-sm tracking-[0.4em] text-white/70">ENVANTER</div>
+          <div className="font-heading text-sm tracking-[0.4em] text-white/70">INVENTORY</div>
         </div>
         <h2
           className="font-heading uppercase text-white leading-none tracking-tighter"
@@ -57,7 +57,7 @@ export default function InventoryScreen({ onBack }) {
           YOUR <span style={{ color: '#B14BF4' }}>NFTs</span>
         </h2>
         <p className="font-heading text-white/50 tracking-widest mt-2 text-sm">
-          Sahip olduğun NFT kramponlar
+          Boots you own
         </p>
 
         {!isConnected ? (
@@ -70,7 +70,7 @@ export default function InventoryScreen({ onBack }) {
               <div className="font-heading text-2xl tracking-widest">CONNECT WALLET</div>
             </div>
             <p className="text-white/70 font-body leading-relaxed">
-              Envanterini görmek için cüzdanını bağla.
+              Connect your wallet to view your inventory.
             </p>
             <button
               type="button"
@@ -86,9 +86,9 @@ export default function InventoryScreen({ onBack }) {
           <p className="mt-10 font-heading text-white/60 tracking-widest">LOADING…</p>
         ) : ownedBoots.length === 0 ? (
           <div className="mt-10 max-w-xl border border-white/10 bg-black/60 backdrop-blur-md p-8" data-testid="inventory-empty">
-            <div className="font-heading text-2xl tracking-widest text-white/80">HENÜZ NFT YOK</div>
+            <div className="font-heading text-2xl tracking-widest text-white/80">NO NFTS YET</div>
             <p className="text-white/60 font-body mt-3 leading-relaxed">
-              NFT-SHOP'tan bir krampon satın aldığında burada görünecek.
+              Boots you buy from the NFT-SHOP will appear here.
             </p>
           </div>
         ) : (

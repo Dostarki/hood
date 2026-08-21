@@ -42,6 +42,11 @@ Arcade side-view football game "KICKHOOD". 90-second matches.
 - **RANKED PLAY**: `RankedStake.js` now requires an on-chain payment before matchmaking — selecting a stake ($1/$10/$50/$100) switches to Robinhood chain, converts USD→ETH at live rate, sends ETH to treasury `0x603a...096F` (sendTransaction + waitForTransactionReceipt), logs via `POST /api/ranked/pay` (collection `ranked_stakes`), then proceeds to `onSelect` → matchmaking. Price feed switched to reliable `/api/eth-price`.
 - Verified: ENVANTER button + inventory connect/empty states, `/api/ranked/pay` endpoint (curl). NOT verified end-to-end on-chain (needs real funded Robinhood wallet).
 
+## English text + 2x note + in-match boot (added 2026-06)
+- All Turkish strings in `InventoryScreen.js` and `RankedStake.js` (and INVENTORY menu button) converted to English.
+- Ranked screen now shows: "WIN THE MATCH TO GET 2X YOUR STAKE BACK." (`ranked-2x-note`).
+- In-match player boot already reflects the equipped bootId (color/effect) via engine `getBootById` → `drawBoot`; added a colored NFT aura glow in `drawBoot` so purchased boot color/effect stands out on the field.
+
 ## Backlog / Next
 - Awaiting further user edit requests.
 

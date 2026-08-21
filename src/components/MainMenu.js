@@ -197,7 +197,7 @@ export default function MainMenu({ onStartAiMatch, onOpenProfile, onOpenBoots, o
             onClick={handleBoots}
           >
             <ShoppingBag size={22} strokeWidth={2.5} />
-            SHOP
+            NFT-SHOP
           </button>
           <button
             type="button"

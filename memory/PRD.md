@@ -21,5 +21,14 @@ Arcade side-view football game "KICKHOOD". 90-second matches.
 - [DONE] Both services running; app loads at preview URL; leaderboard reads live from Atlas.
 - [DONE] Main menu, wallet gate, leaderboard verified via screenshot.
 
+## NFT Boot Shop (added 2026-06)
+- MainMenu button renamed SHOP -> **NFT-SHOP**; BootScreen header -> NFT-SHOP.
+- Boots renamed + priced (`src/game/boots.js`): STANDARD BLACK (free), FLAME NFT $1, STORM NFT $3, LIGHTNING NFT $10, TITANIUM NFT $15, GALAXY NFT $30, GOLDEN NFT $50 (S:30 P:25, new).
+- Payment: on "BUY", frontend switches to Robinhood chain, fetches live ETH/USD, converts USD price to ETH, and sends native ETH from the connected wallet to treasury `0x603a26e0745aE579ad0F931307a386ddC3DD096F` via `@wagmi/core` sendTransaction + waitForTransactionReceipt.
+- Backend (`server.js`): `GET /api/eth-price` (Coinbase primary, CoinGecko fallback, 60s cache), `POST /api/nft/purchase` (records ownership + tx in `nft_purchases`, upserts `users.ownedBoots`), `GET /api/nft/owned/:wallet`.
+- Ownership gates EQUIP: free boot always usable; NFT boots require purchase before equipping.
+- Verified: UI states, all names/prices/stats, eth-price feed, purchase+owned endpoints (curl). NOT verified end-to-end on-chain (requires a real funded wallet on Robinhood chain).
+
 ## Backlog / Next
-- Awaiting user's edit requests (features / bug fixes / design changes).
+- Awaiting further user edit requests.
+

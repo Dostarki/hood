@@ -1,0 +1,34 @@
+{
+  "summary": "First-finish frontend smoke test of NEON PITCH STRIKER 2D football game. Main menu, settings toggle, sound toggle, play flow, HUD (score/timer), keyboard input, ESC pause/resume, mobile controls visibility, and canvas responsiveness all verified. Timer decrements correctly. Simultaneous multi-touch via synthetic PointerEvent dispatch could not be validated (JS PointerEvent doesn't create an active pointer), but real mouse pointerdown on mobile buttons worked and no visual issues in mobile viewport. Backend not tested (per request).",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "Main menu loads at root URL with title 'NEON PITCH STRIKER'",
+    "play-btn, settings-btn, sound-toggle-btn all visible",
+    "Sound toggle switches label 'SES AÇIK' <-> 'SES KAPALI'",
+    "Settings panel opens/closes on click (settings-panel testid present)",
+    "OYNA starts game -> game-canvas visible, score-left=0, score-right=0, timer=1:30",
+    "Keyboard inputs (a/d/w/Space/ArrowRight) dispatch without errors",
+    "Timer counts down (1:27 -> 1:22 over 5s)",
+    "ESC opens pause-overlay with resume-btn and quit-btn; Resume returns to game",
+    "Ana Menü button returns to main menu",
+    "Mobile viewport (390x844): all 4 mobile-btn-{left,right,jump,shoot} testids visible",
+    "Real pointerdown/up on mobile-btn-right handled without error",
+    "No horizontal scroll on desktop 1365x768 or mobile 390x844",
+    "engine.js code review: onEnd({scoreL,scoreR}) is invoked when time<=0 (line 279); _handleGoal increments score and resets ball after 800ms freeze (lines 344-356)",
+    "Rendering verified via screenshot: green YOU player, red CPU player, ball, goals, HUD"
+  ],
+  "failed": [
+    {
+      "area": "mobile controls - synthetic PointerEvent test only",
+      "issue": "Dispatching synthetic PointerEvent('pointerdown') from JS triggers 'Failed to execute setPointerCapture: No active pointer with the given id is found' runtime error overlay in dev mode. This does NOT reproduce with real touch/mouse pointers (setPointerCapture only works with a real active pointer). Recommend wrapping setPointerCapture in try/catch to guard against edge cases (some browsers/devtools).",
+      "evidence": "Uncaught runtime error dialog appeared after evaluate() dispatched synthetic PointerEvents; regular mouse.down on the same button worked cleanly.",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Optional hardening: in MobileControls.js onPointerDown, wrap e.currentTarget.setPointerCapture(e.pointerId) in try/catch to avoid runtime error on unusual pointer sources."
+  ],
+  "success_rate": {"backend": "not tested", "frontend": "~95%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

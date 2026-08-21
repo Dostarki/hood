@@ -29,6 +29,10 @@ Arcade side-view football game "KICKHOOD". 90-second matches.
 - Ownership gates EQUIP: free boot always usable; NFT boots require purchase before equipping.
 - Verified: UI states, all names/prices/stats, eth-price feed, purchase+owned endpoints (curl). NOT verified end-to-end on-chain (requires a real funded wallet on Robinhood chain).
 
+## Boot Visuals + Live ETH (added 2026-06)
+- New high-quality showcase renderer `drawBootShowcase` (`src/game/renderer.js`): side-profile football cleat with starry night backdrop, sparkle stars, gloss highlight, laces panel, sole + studs, accent stripes (normal), nebula (galaxy), shine streak (reflection/golden). Used in shop preview cards; in-game `drawBoot` unchanged.
+- Each shop card now shows live ETH equivalent under the USD price (`/api/eth-price`, client refresh every 30s). Purchase converts USD→ETH at the live rate at buy time.
+
 ## Backlog / Next
 - Awaiting further user edit requests.
 

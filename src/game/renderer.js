@@ -740,6 +740,257 @@ export function drawBoot(ctx, x, y, facing, boot, scale = 1, rotation = 0) {
   ctx.restore();
 }
 
+// High-quality, comic-styled side-profile football cleat for the NFT shop preview.
+// Renders a starry backdrop + detailed boot (upper, sole, studs, laces, stripes, gloss).
+export function drawBootShowcase(ctx, cx, cy, boot, size = 220) {
+  const b = boot || {};
+  const isGalaxy = b.effect === 'galaxy';
+  const main = b.color || '#FFB300';
+  const accent = b.secondary || '#FFA500';
+  const lightMain = darkenColor(main, -55);   // lighter tint
+  const darkMain = darkenColor(main, 45);      // darker shade
+  const soleLight = '#FFF3D0';
+  const soleDark = '#E6C879';
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // --- Starry night backdrop ---
+  const bg = ctx.createRadialGradient(0, -size * 0.15, size * 0.1, 0, 0, size * 0.75);
+  bg.addColorStop(0, '#1B2450');
+  bg.addColorStop(0.6, '#101736');
+  bg.addColorStop(1, '#070B1C');
+  ctx.fillStyle = bg;
+  ctx.fillRect(-size / 2, -size / 2, size, size);
+
+  // tiny stars (deterministic pseudo-random from a fixed seed for stable look)
+  let seed = 1337;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = 0; i < 46; i++) {
+    const sx = (rnd() - 0.5) * size;
+    const sy = (rnd() - 0.5) * size;
+    const r = rnd() * 1.4 + 0.3;
+    ctx.globalAlpha = 0.35 + rnd() * 0.6;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // a couple of sparkle (4-point) stars like the reference
+  const sparkle = (px, py, s, col) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(px, py - s);
+    ctx.quadraticCurveTo(px + s * 0.18, py - s * 0.18, px + s, py);
+    ctx.quadraticCurveTo(px + s * 0.18, py + s * 0.18, px, py + s);
+    ctx.quadraticCurveTo(px - s * 0.18, py + s * 0.18, px - s, py);
+    ctx.quadraticCurveTo(px - s * 0.18, py - s * 0.18, px, py - s);
+    ctx.fill();
+  };
+  sparkle(size * 0.34, -size * 0.28, 9, '#FFF9D6');
+  sparkle(-size * 0.36, size * 0.02, 6, '#CFE0FF');
+  sparkle(size * 0.30, size * 0.24, 5, '#FFFFFF');
+
+  // Scale the boot into the card. Boot drawn in ~[-70,60] x [-34,40].
+  const s = size / 190;
+  ctx.scale(s, s);
+  ctx.translate(-4, 2);
+
+  // soft ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(-6, 40, 66, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  // ===== SOLE =====
+  ctx.beginPath();
+  ctx.moveTo(-70, 22);
+  ctx.quadraticCurveTo(-74, 30, -64, 32);
+  ctx.lineTo(44, 32);
+  ctx.quadraticCurveTo(56, 32, 54, 24);
+  ctx.lineTo(48, 22);
+  ctx.lineTo(-64, 22);
+  ctx.closePath();
+  const soleGrad = ctx.createLinearGradient(0, 20, 0, 34);
+  soleGrad.addColorStop(0, soleLight);
+  soleGrad.addColorStop(1, soleDark);
+  ctx.fillStyle = soleGrad;
+  ctx.lineWidth = 4.5;
+  ctx.strokeStyle = '#20130A';
+  ctx.fill();
+  ctx.stroke();
+
+  // ===== STUDS =====
+  ctx.fillStyle = darkenColor(soleDark, 40);
+  ctx.strokeStyle = '#20130A';
+  ctx.lineWidth = 3;
+  const stud = (sx) => {
+    ctx.beginPath();
+    ctx.moveTo(sx - 6, 32);
+    ctx.lineTo(sx + 6, 32);
+    ctx.lineTo(sx + 3.5, 41);
+    ctx.quadraticCurveTo(sx, 44, sx - 3.5, 41);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  };
+  [-56, -34, -10, 16, 40].forEach(stud);
+
+  // ===== UPPER (main body) =====
+  ctx.beginPath();
+  ctx.moveTo(-70, 22);                          // toe bottom
+  ctx.quadraticCurveTo(-72, 6, -58, -2);        // toe cap front
+  ctx.quadraticCurveTo(-40, -14, -14, -16);     // vamp top
+  ctx.quadraticCurveTo(6, -17, 18, -14);        // toward throat
+  ctx.lineTo(30, -18);                          // rise to collar front
+  ctx.quadraticCurveTo(40, -22, 48, -12);       // collar top
+  ctx.quadraticCurveTo(56, 2, 50, 16);          // heel back
+  ctx.quadraticCurveTo(48, 22, 40, 22);         // heel bottom
+  ctx.lineTo(-64, 22);                          // sole line
+  ctx.closePath();
+
+  if (isGalaxy) {
+    const g = ctx.createLinearGradient(-60, -16, 40, 22);
+    g.addColorStop(0, '#160F3A');
+    g.addColorStop(0.5, '#3A2F7A');
+    g.addColorStop(1, '#1A1440');
+    ctx.fillStyle = g;
+  } else {
+    const g = ctx.createLinearGradient(0, -18, 0, 22);
+    g.addColorStop(0, lightMain);
+    g.addColorStop(0.55, main);
+    g.addColorStop(1, darkMain);
+    ctx.fillStyle = g;
+  }
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#20130A';
+  ctx.fill();
+  ctx.stroke();
+
+  // clip to the upper for interior details
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-70, 22);
+  ctx.quadraticCurveTo(-72, 6, -58, -2);
+  ctx.quadraticCurveTo(-40, -14, -14, -16);
+  ctx.quadraticCurveTo(6, -17, 18, -14);
+  ctx.lineTo(30, -18);
+  ctx.quadraticCurveTo(40, -22, 48, -12);
+  ctx.quadraticCurveTo(56, 2, 50, 16);
+  ctx.quadraticCurveTo(48, 22, 40, 22);
+  ctx.lineTo(-64, 22);
+  ctx.closePath();
+  ctx.clip();
+
+  if (isGalaxy) {
+    // galaxy stars + nebula inside the boot
+    ctx.fillStyle = 'rgba(255,0,255,0.28)';
+    ctx.beginPath(); ctx.arc(6, 4, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,220,255,0.25)';
+    ctx.beginPath(); ctx.arc(-24, 8, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    for (let i = 0; i < 22; i++) {
+      ctx.globalAlpha = 0.5 + rnd() * 0.5;
+      ctx.beginPath();
+      ctx.arc(-64 + rnd() * 110, -14 + rnd() * 34, rnd() * 1.3 + 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    // three accent side-stripes (adidas-style) sweeping toward the sole
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const off = i * 12;
+      ctx.beginPath();
+      ctx.moveTo(-6 + off, -12);
+      ctx.quadraticCurveTo(-14 + off, 6, -22 + off, 20);
+      ctx.stroke();
+    }
+  }
+
+  // glossy highlight sweeping across toe & vamp
+  const gloss = ctx.createLinearGradient(-60, -16, -20, 8);
+  gloss.addColorStop(0, 'rgba(255,255,255,0.55)');
+  gloss.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gloss;
+  ctx.beginPath();
+  ctx.moveTo(-64, 0);
+  ctx.quadraticCurveTo(-52, -14, -30, -14);
+  ctx.quadraticCurveTo(-44, -4, -50, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // reflection shine streak for titanium/golden
+  if (b.effect === 'reflection') {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(-8, -16);
+    ctx.lineTo(8, -16);
+    ctx.lineTo(-14, 22);
+    ctx.lineTo(-28, 22);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // ===== TONGUE / THROAT panel =====
+  ctx.fillStyle = darkenColor(main, 30);
+  ctx.strokeStyle = '#20130A';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, -14);
+  ctx.quadraticCurveTo(18, -16, 30, -16);
+  ctx.lineTo(24, 4);
+  ctx.quadraticCurveTo(10, 6, -4, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // ===== LACES =====
+  ctx.strokeStyle = '#FFF7E6';
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = 'round';
+  const laceRows = [
+    [[2, -12], [22, -13]],
+    [[3, -6], [22, -7]],
+    [[4, 0], [21, -1]],
+  ];
+  laceRows.forEach(([a, c]) => {
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(c[0], c[1]);
+    ctx.stroke();
+  });
+  // crossing laces
+  ctx.beginPath();
+  ctx.moveTo(4, -13); ctx.lineTo(20, -1);
+  ctx.moveTo(20, -13); ctx.lineTo(4, -1);
+  ctx.stroke();
+  // eyelets
+  ctx.fillStyle = '#20130A';
+  [[2, -12], [22, -13], [3, -6], [22, -7], [4, 0], [21, -1]].forEach(([ex, ey]) => {
+    ctx.beginPath(); ctx.arc(ex, ey, 1.6, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // heel collar rim
+  ctx.strokeStyle = darkenColor(main, 55);
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(30, -17);
+  ctx.quadraticCurveTo(40, -21, 47, -12);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+
 function drawHead(ctx, cx, headCY, r, theme, facing, teamColor) {
   if (theme?.type === 'ape') {
     // Base head (fur) with jagged edges for furry look

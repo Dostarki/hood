@@ -22,8 +22,8 @@ function BootCard({ boot, selected, owned }) {
     const ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, 220, 220);
-    import('@/game/renderer').then(({ drawBoot }) => {
-      drawBoot(ctx, 110, 110, 1, boot, 2, 0);
+    import('@/game/renderer').then(({ drawBootShowcase }) => {
+      drawBootShowcase(ctx, 110, 110, boot, 220);
     });
   }, [boot]);
 
@@ -37,7 +37,7 @@ function BootCard({ boot, selected, owned }) {
       }}
     >
       <div className="relative">
-        <canvas ref={canvasRef} style={{ width: 220, height: 220, background: 'rgba(255,255,255,0.02)' }} />
+        <canvas ref={canvasRef} style={{ width: 220, height: 220 }} />
         {boot.isNft && (
           <div
             className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 text-[10px] font-heading tracking-widest"
@@ -91,12 +91,17 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
       .catch(() => {});
   }, [address]);
 
-  // Load live ETH price for approximate display.
+  // Load live ETH price for approximate display (refreshes periodically).
   useEffect(() => {
-    fetch('/api/eth-price')
-      .then((r) => r.json())
-      .then((d) => setUsdPerEth(d.usdPerEth || null))
-      .catch(() => {});
+    let active = true;
+    const load = () =>
+      fetch('/api/eth-price')
+        .then((r) => r.json())
+        .then((d) => { if (active) setUsdPerEth(d.usdPerEth || null); })
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 30000);
+    return () => { active = false; clearInterval(id); };
   }, []);
 
   const approxEth = (priceUsd) => {
@@ -262,11 +267,16 @@ export default function BootScreen({ initialBootId, onBack, onSave }) {
                     <span className="text-xs text-[#00FF66]">S:{b.spdBonus}</span>
                     <span className="text-xs text-[#F4E04D]">P:{b.powBonus}</span>
                   </div>
-                  <div className="mt-1 text-[10px] font-heading tracking-widest">
+                  <div className="mt-1 text-[10px] font-heading tracking-widest text-center">
                     {ownedB ? (
-                      <span className="text-[#00FF66] flex items-center gap-1">{b.isNft ? <Check size={10} /> : null}{b.isNft ? 'OWNED' : 'FREE'}</span>
+                      <span className="text-[#00FF66] flex items-center gap-1 justify-center">{b.isNft ? <Check size={10} /> : null}{b.isNft ? 'OWNED' : 'FREE'}</span>
                     ) : (
-                      <span className="flex items-center gap-1" style={{ color: b.color }}><Lock size={10} /> ${b.priceUsd}</span>
+                      <div className="flex flex-col items-center leading-tight">
+                        <span className="flex items-center gap-1" style={{ color: b.color }}><Lock size={10} /> ${b.priceUsd}</span>
+                        <span className="text-white/45" data-testid={`eth-${b.id}`}>
+                          {approxEth(b.priceUsd) ? `≈ ${approxEth(b.priceUsd)} ETH` : '…'}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </button>

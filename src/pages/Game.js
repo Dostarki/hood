@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAccount } from 'wagmi';
 import GameCanvas from '@/components/GameCanvas';
 import HUD from '@/components/HUD';
 import MobileControls from '@/components/MobileControls';
@@ -37,6 +38,7 @@ export default function Game() {
   const [playerTeam, setPlayerTeam] = useState(() => getTeamById(initialPref.teamId));
   const [aiTeam, setAiTeam] = useState(() => randomOpponent(initialPref.teamId));
   const [finalScore, setFinalScore] = useState({ scoreL: 0, scoreR: 0 });
+  const hasEndedRef = useRef(false);
   const [gameKey, setGameKey] = useState(0);
   const [stats, setStats] = useState(() => loadStats());
   const [matchRecords, setMatchRecords] = useState(null);
@@ -46,8 +48,55 @@ export default function Game() {
   const [rankedStake, setRankedStake] = useState(10); // selected ranked stake in USD
   const engineRef = useRef(null);
   const isMobile = useIsMobile();
+  const { isConnected, address } = useAccount();
 
   const [bootId, setBootId] = useState(initialPref.bootId || 'boot_1');
+
+  const recordGoals = useCallback((playerGoals) => {
+    if (isConnected && address && playerGoals > 0) {
+      fetch('/api/user/record-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: address, goalsScored: playerGoals })
+      }).catch(err => console.error('Failed to record match goals', err));
+    }
+  }, [isConnected, address]);
+
+  const handleEnd = useCallback((s) => {
+    if (hasEndedRef.current) return;
+    hasEndedRef.current = true;
+    setFinalScore(s);
+    if (gameMode === 'ai') {
+      const { stats: newStats, records } = recordMatch({
+        teamId: playerTeam.id,
+        playerScore: s.scoreL,
+        cpuScore: s.scoreR,
+      });
+      setStats(newStats);
+      setMatchRecords(records);
+      recordGoals(s.scoreL);
+    } else if (gameMode === 'host') {
+      const { stats: newStats, records } = recordMatch({
+        teamId: playerTeam.id,
+        playerScore: s.scoreL,
+        cpuScore: s.scoreR,
+      });
+      setStats(newStats);
+      setMatchRecords(records);
+      recordGoals(s.scoreL);
+      net.sendMatchEnd({ scoreL: s.scoreL, scoreR: s.scoreR });
+    } else if (gameMode === 'guest') {
+      const { stats: newStats, records } = recordMatch({
+        teamId: playerTeam.id,
+        playerScore: s.scoreR,
+        cpuScore: s.scoreL,
+      });
+      setStats(newStats);
+      setMatchRecords(records);
+      recordGoals(s.scoreR);
+    }
+    setState(STATE.ENDED);
+  }, [playerTeam, gameMode, recordGoals]);
 
   useEffect(() => {
     audio.init();
@@ -109,24 +158,22 @@ export default function Game() {
         // Guest checks match end via time reaching 0
         if (msg.state.t <= 0 && !engineRef.current.ended) {
           engineRef.current.ended = true;
-          setFinalScore({ scoreL: msg.state.sL, scoreR: msg.state.sR });
-          setState(STATE.ENDED);
+          handleEnd({ scoreL: msg.state.sL, scoreR: msg.state.sR });
         }
       }
     }));
     unsubs.push(net.on('match_end', (msg) => {
-      if (gameMode === 'guest') {
-        setFinalScore({ scoreL: msg.scoreL, scoreR: msg.scoreR });
-        setState(STATE.ENDED);
+      if (gameMode === 'guest' && engineRef.current && !engineRef.current.ended) {
+        engineRef.current.ended = true;
+        handleEnd({ scoreL: msg.scoreL, scoreR: msg.scoreR });
       }
     }));
     unsubs.push(net.on('opponent_left', () => {
       setOnlineInfo((info) => ({ ...(info || {}), opponentLeft: true }));
-      if (engineRef.current) {
+      if (engineRef.current && !engineRef.current.ended) {
         engineRef.current.ended = true;
+        handleEnd({ scoreL: engineRef.current.scoreL, scoreR: engineRef.current.scoreR });
       }
-      setFinalScore({ scoreL: engineRef.current?.scoreL || 0, scoreR: engineRef.current?.scoreR || 0 });
-      setState(STATE.ENDED);
     }));
     // Connection resilience: pause + banner during reconnect, resume seamlessly
     unsubs.push(net.on('reconnecting', () => setConnMsg('RECONNECTING…')));
@@ -147,7 +194,7 @@ export default function Game() {
       clearInterval(inputInterval);
       unsubs.forEach((u) => u());
     };
-  }, [gameMode, state]);
+  }, [gameMode, state, handleEnd]);
 
   const openProfile = useCallback(() => {
     audio.init();
@@ -184,6 +231,7 @@ export default function Game() {
     setGameMode('ai');
     setOnlineInfo(null);
     setConnMsg(null);
+    hasEndedRef.current = false;
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [playerTeam.id]);
@@ -217,6 +265,7 @@ export default function Game() {
     setGameMode(role);
     setOnlineInfo({ opponentName: opponent?.name || 'Opponent', role, leftTeam, rightTeam });
     setConnMsg(null);
+    hasEndedRef.current = false;
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [playerTeam, bootId]);
@@ -224,39 +273,6 @@ export default function Game() {
   const handleScore = useCallback(() => {
     // Canvas GOOOL! effect handles visual
   }, []);
-
-  const handleEnd = useCallback((s) => {
-    setFinalScore(s);
-    if (gameMode === 'ai') {
-      const { stats: newStats, records } = recordMatch({
-        teamId: playerTeam.id,
-        playerScore: s.scoreL,
-        cpuScore: s.scoreR,
-      });
-      setStats(newStats);
-      setMatchRecords(records);
-    } else if (gameMode === 'host') {
-      // Also record for host — leftScore is host's own score
-      const { stats: newStats, records } = recordMatch({
-        teamId: playerTeam.id,
-        playerScore: s.scoreL,
-        cpuScore: s.scoreR,
-      });
-      setStats(newStats);
-      setMatchRecords(records);
-      net.sendMatchEnd({ scoreL: s.scoreL, scoreR: s.scoreR });
-    } else if (gameMode === 'guest') {
-      // Guest: their score is on the right (they are the right player)
-      const { stats: newStats, records } = recordMatch({
-        teamId: playerTeam.id,
-        playerScore: s.scoreR,
-        cpuScore: s.scoreL,
-      });
-      setStats(newStats);
-      setMatchRecords(records);
-    }
-    setState(STATE.ENDED);
-  }, [playerTeam, gameMode]);
 
   const handleRematch = useCallback(() => {
     if (gameMode !== 'ai') {
@@ -270,6 +286,7 @@ export default function Game() {
     }
     setFinalScore({ scoreL: 0, scoreR: 0 });
     setMatchRecords(null);
+    hasEndedRef.current = false;
     setGameKey((k) => k + 1);
     setState(STATE.PLAYING);
   }, [gameMode]);

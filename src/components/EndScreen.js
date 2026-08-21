@@ -1,6 +1,25 @@
 import { RotateCcw, Home, Trophy, Sparkles } from 'lucide-react';
+import { useAccount } from 'wagmi';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
+import { toast } from "sonner";
 
 export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, records, opponentLeft, onlineMode }) {
+  const { isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
+
+  const handleRematch = () => {
+    if (!isConnected) {
+      toast.error("Wallet Connection Required", {
+        description: "Please connect your wallet to play again."
+      });
+      if (openConnectModal) {
+        openConnectModal();
+      }
+      return;
+    }
+    onRematch();
+  };
+
   let title = 'DRAW';
   let color = '#FFFFFF';
   if (scoreL > scoreR) { title = 'YOU WIN'; color = '#00FF66'; }
@@ -72,7 +91,7 @@ export default function EndScreen({ scoreL, scoreR, onRematch, onMenu, stats, re
               type="button"
               data-testid="rematch-btn"
               className="btn-brutal flex items-center gap-3"
-              onClick={onRematch}
+              onClick={handleRematch}
             >
               <RotateCcw size={20} strokeWidth={3} />
               PLAY AGAIN

@@ -56,6 +56,79 @@ app.prepare().then(async () => {
     }
   });
 
+  // User & Leaderboard Routes
+  server.get('/api/user/:walletAddress', async (req, res) => {
+    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    try {
+      const user = await db.collection('users').findOne({ walletAddress: req.params.walletAddress });
+      if (user) {
+        res.json(user);
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  server.post('/api/user/register', async (req, res) => {
+    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    try {
+      const { walletAddress, nickname } = req.body;
+      if (!walletAddress || !nickname) return res.status(400).json({ error: 'Missing data' });
+      
+      const existingUser = await db.collection('users').findOne({ walletAddress });
+      if (existingUser) {
+        if (!existingUser.nickname) {
+          await db.collection('users').updateOne({ walletAddress }, { $set: { nickname } });
+          return res.json({ success: true, message: 'Nickname updated' });
+        }
+        return res.json({ success: false, message: 'User already registered' });
+      }
+
+      const newUser = {
+        walletAddress,
+        nickname,
+        totalGoals: 0,
+        createdAt: new Date()
+      };
+      await db.collection('users').insertOne(newUser);
+      res.json({ success: true, user: newUser });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  server.post('/api/user/record-match', async (req, res) => {
+    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    try {
+      const { walletAddress, goalsScored } = req.body;
+      if (!walletAddress || typeof goalsScored !== 'number') return res.status(400).json({ error: 'Missing data' });
+
+      await db.collection('users').updateOne(
+        { walletAddress },
+        { $inc: { totalGoals: goalsScored } }
+      );
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  server.get('/api/leaderboard', async (req, res) => {
+    if (!db) return res.status(500).json({ error: 'DB not connected' });
+    try {
+      const topUsers = await db.collection('users')
+        .find({ nickname: { $exists: true, $ne: '' } })
+        .sort({ totalGoals: -1 })
+        .limit(10)
+        .toArray();
+      res.json(topUsers);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Matchmaking logic
   class Player {
     constructor(ws, name, teamId, stake) {

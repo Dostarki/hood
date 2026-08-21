@@ -1427,14 +1427,14 @@ function drawGoalText(ctx, side, celebration) {
 
   ctx.shadowBlur = 20;
   ctx.fillStyle = '#FFFFFF'; // White text
-  ctx.fillText('GOOOL!', 0, 0);
+  ctx.fillText('GOAL!', 0, 0);
   ctx.shadowBlur = 0;
 
   // Stroke outline
   ctx.lineWidth = 4;
   ctx.strokeStyle = '#0A0D0B';
-  ctx.strokeText('GOOOL!', 0, 0);
-  ctx.fillText('GOOOL!', 0, 0);
+  ctx.strokeText('GOAL!', 0, 0);
+  ctx.fillText('GOAL!', 0, 0);
 
   // Subtitle
   ctx.font = 'bold 34px "Bebas Neue", sans-serif';
